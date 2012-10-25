@@ -2,26 +2,27 @@
 
 from foam.flowvisor import FSAllocation
 from foam.lib import FlowSpec
+from foam.flowclashdetection.interval_structure import ivalStruct
 
-class MACTree(object):
+class MACiValTree(object):
 	def __init__(self):
 		
-class ETherTypeTree(object):
+class ETherTypeiValTree(object):
 	def __init__(self):
 
-class VLANTree(object):
+class VLANiValTree(object):
 	def __init__(self):
 
-class IPSubnetTree(object):
+class IPSubnetiValTree(object):
 	def __init__(self):
 	
-class NWProtoTree(object):
+class NWProtoiValTree(object):
 	def __init__(self):
 	
-class TPPortTree(object):
+class TPPortiValTree(object):
 	def __init__(self):
 	
-class DataPathTree(object):
+class DataPathiValTree(object):
 	def __init__(self):
 	
 def getAllocatedFlowSpace():
