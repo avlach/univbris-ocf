@@ -27,10 +27,11 @@ class IValTree(object):
 	
 	def __init__(self):
 		self.root = None
+		self.depth = 0
 		
 	def addIVal(self, root, start, stop, value):
-		if root == None:
-			root = IvalNode(start, stop, value)
+		if root is None:
+			root = IValNode(start, stop, value)
 		else:
 			root.max_high = max(root.max_high, stop)
 			if start <= root.low_end:
@@ -39,6 +40,7 @@ class IValTree(object):
 			else:
 				root.right = self.addIVal(root.right, start, stop, value)
 				root.right.parent = root
+		self.depth = self.findDepth(root)
 		return root
 	
 	def remIVal(self, root, start, stop, value):
@@ -49,70 +51,113 @@ class IValTree(object):
 		node_to_remove = iValList[i]
 		if node_to_remove is None:
 			print "The current interval is non-existent!"
-		else if node_to_remove.parent is None: #This is the current root
+		elif node_to_remove.parent is None: #This is the current root
 			if node_to_remove.left is None:
-				if node_to_remove.right is None:
+				if node_to_remove.right is None:	#no root, no tree
 					root = None
-				else:
+				else:	#the first node of the right subtree will become root
 					node_to_remove.right.parent = None
 					root = node_to_remove.right
 			else:
-				if node_to_remove.right is None:
+				if node_to_remove.right is None:	#the first node of the left subtree will become root
 					node_to_remove.left.parent = None
 					root = node_to_remove.left
-				else:
-					
-		else:
+				else: #need to rebalance the tree since both left and right subtrees not empty
+					current_node = node_to_remove.right
+					node_to_remove.right.parent = None
+					root = node_to_remove.right	#make the initial top node of right subtree root
+					while current_node.left is not None: 	#scan the right subtree until you reach the most left leaf
+						current_node = current_node.left
+					current_node.left = node_to_remove.left #now place there the initial left subtree
+					node_to_remove.left.parent = current_node
+					while current_node.parent is not None:	#now update the max_high values recursively
+						current_node.max_high = max(current_node.max_high, current_node.left.max_high)	
+						current_node = current_node.parent
+		else: 	#The node to remove is intermediate
 			if node_to_remove.low_end <= node_to_remove.parent.low_end: #node is at the left
 				node_to_remove.parent.left = node_to_remove.left
 				rec_node = node_to_remove.parent
-				while rec_node != None:
+				while rec_node.parent is not None:
+					if rec_node.right is None:
+						if rec_node.left is None:
+							rec_node.max_high = 0
+						else:
+							rec_node.max_high = max(rec_node.left.max_high, rec_node.left.high_end)
+					else:
+						if rec_node_left is None:
+							rec_node.max_high = max(rec_node.right.max_high,rec_node.right.high_end)
+						else:
+							rec_node.max_high = max(max(rec_node.left.max_high,rec_node.left.high_end), \
+							max(rec_node.right.max_high,rec_node.right.high_end))
 					rec_node = rec_node.parent
-					rec_node.max_high = max(rec_node.left.max_high, rec_node.right.max_high)
-					if rec_node.left is None or rec_node.right is None
 			else: #node is at the right
 				node_to_remove.parent.right = node_to_remove.right
-				
-		node_to_remove = None		
-		
+				rec_node = node_to_remove.parent
+				while rec_node.parent is not None:
+					if rec_node.right is None:
+						if rec_node.left is None:
+							rec_node.max_high = 0
+						else:
+							rec_node.max_high = max(rec_node.left.max_high, rec_node.left.high_end)
+					else:
+						if rec_node_left is None:
+							rec_node.max_high = max(rec_node.right.max_high,rec_node.right.high_end)
+						else:
+							rec_node.max_high = max(max(rec_node.left.max_high,rec_node.left.high_end), \
+							max(rec_node.right.max_high,rec_node.right.high_end))
+					rec_node = rec_node.parent
+		node_to_remove = None
+		self.depth = self.findDepth(root)
 		return root
 			
-		else:
-			
-	def findOverlapIVal(self, root, start, stop, clashList):
-		cList = clashList
+	def findOverlapIVal(self, root, start, stop, cList):
 		if root != None:
 			if root.low_end > stop:
-				self.findOverlapIVal(root.left, start, stop, cList)
+				cList = self.findOverlapIVal(root.left, start, stop, cList)
 			elif root.high_end < start:
 				if root.max_high > start:
-					findOverlapIVal(root.left, start, stop, cList)
-					findOverlapIVal(root.right, start, stop, cList)
+					cList = self.findOverlapIVal(root.left, start, stop, cList)
+					cList = self.findOverlapIVal(root.right, start, stop, cList)
 			else:
 				cList = cList + [root]
+				cList = self.findOverlapIVal(root.left, start, stop, cList)
+				cList = self.findOverlapIVal(root.right, start, stop, cList)
 		return cList
 	
-	def depth(self, root):
-		if root == None:
+	def findDepth(self, root):
+		if root is None:
 			return 0
 		else:
-			ldpeth = self.depth(root.left)
-			rdepth = self.depth(root.right)
-			return max(ldepth, rdpeth) + 1
+			ldepth = self.findDepth(root.left)
+			rdepth = self.findDepth(root.right)
+			return max(ldepth, rdepth) + 1
 	
 	def size(self, root):
-		if root == None:
+		if root is None:
 			return 0
 		else:
 			return self.size(root.left) + 1 + self.size(root.right)
 			
 	def printTree(self, root):
-		if root == None:
+		if root is None:
 			pass
 		else:
-			print "ival [" + root.low_end + "-" + root.high_end + "] : " + value + ", "
+			print "Interval [" + str(root.low_end) + "-" + str(root.high_end) + "] : value = " + str(root.value) + \
+			", maximum high end of children = " + str(root.max_high) + ", positioned at level " + str((self.depth - self.findDepth(root) + 1)),
+			if root.parent is not None:
+				if root.low_end < root.parent.low_end:
+					print ", is left child of interval node " + "[" + str(root.parent.low_end) + "-" + str(root.parent.high_end) + "]"
+				else:
+					print ", is right child of interval node " + "[" + str(root.parent.low_end) + "-" + str(root.parent.high_end) + "]"
+			else:
+				print ", is root node"
 			self.printTree(root.left)
 			self.printTree(root.right)
+			
+	def printOverlapList(self, ovList, ovIvalStart, ovIvalStop):
+		print "Overlapping intervals with " + "[" + str(ovIvalStart) + "-" + str(ovIvalStop) + "] :"
+		for i in ovList:
+			print "[" + str(i.low_end) + "-" + str(i.high_end) + "]" 
 
 	
 	
