@@ -28,7 +28,7 @@ import foam.geni.lib
 
 import sfa
 
-#further imports that may be needed
+#further imports that may be needed (see OMNI)
 import datetime
 import dateutil.parser
 import os
@@ -42,16 +42,64 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
     super(AMAPIv2, self).__init__("GAPIv2", log)
 	
 	def recordAction (self, action, credentials = [], urn = None):
-    cred_ids = []
-
-    self._actionLog.info("Sliver: %s  Action: %s" % (urn, action))
-
+		cred_ids = []
+		self._actionLog.info("Sliver: %s  Gapi2 Action: %s" % (urn, action))
     for cred in credentials:
       self._actionLog.info("Credential: %s" % (cred))
-			
+		
+	def pub_GetVersion  (self):
+		self.recordAction("getversion")
+		d ={"geni_api" : 2,
+				"geni_api_versions" : {
+						'1' : 'https://localhost:3626/core/gapi1/',
+						'2' : 'https://localhost:3626/core/gapi2/'
+				}
+				"geni_request_rspec_versions" : [
+            { 'type': 'GENI',
+              'version': '3',
+							'schema': 'http://www.geni.net/resources/rspec/3/request.xsd',
+						  'namespace': 'http://www.geni.net/resources/rspec/3',
+							'extensions': [ 'http://www.geni.net/resources/rspec/ext/openflow/3',
+                              'http://www.geni.net/resources/rspec/ext/openflow/4',
+                              'http://www.geni.net/resources/rspec/ext/flowvisor/1', ]}
+            ],
+        "geni_ad_rspec_versions" : [
+            { 'type': 'GENI',
+							'version': '3',
+							'schema': 'http://www.geni.net/resources/rspec/3/ad.xsd',
+							'namespace': 'http://www.geni.net/resources/rspec/3',
+							'extensions': [ 'http://www.geni.net/resources/rspec/ext/openflow/3' ]}
+            ],
+				"options" : {
+						'site_info' : self.generateSiteInfo
+				}
+       }
+		#legacy, accumulated to options		
+		#d["site_info"] = self.generateSiteInfo()
+		
+		return d
+	
+	def generateSiteInfo (self):
+    dmap = [("site.admin.name", "admin-name"),
+            ("site.admin.email", "admin-email"),
+            ("site.admin.phone", "admin-phone"),
+            ("site.location.address", "org-address"),
+            ("site.location.organization", "org-name"),
+            ("site.description", "description")]
+    sinfo = {}
+    for ckey, vkey in dmap:
+      val = ConfigDB.getConfigItemByKey(ckey).getValue()
+      if val is not None:
+        sinfo[vkey] = val
 
+    return sinfo
+		
+	def pub_ListResources (self, credentials, options):
+		try:
 
-#same as gapi1
+		
+		
+#setup same as gapi1 (change version nums of course)
 def setup (app):
   gapi2 = XMLRPCHandler('gapi2')
   gapi2.connect(app, '/foam/gapi/2')
