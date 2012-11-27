@@ -45,13 +45,19 @@ class IValTree(object):
 	
 	def remIVal(self, root, start, stop, value):
 		iValList = self.findOverlapIVal(root, start, stop,  [])
+		found_value = 0
 		for i in range(len(iValList)):
 			if iValList[i].value == value:
+				found_value = 1
 				break
+		if found_value == 0:
+			print "Unable to find overlappingg interval with correct value!"
+			return root
 		node_to_remove = iValList[i]
 		if node_to_remove is None:
 			print "The current interval is non-existent!"
 		elif node_to_remove.parent is None: #This is the current root
+			print "Removing current root"
 			if node_to_remove.left is None:
 				if node_to_remove.right is None:	#no root, no tree
 					root = None
@@ -74,6 +80,7 @@ class IValTree(object):
 						current_node.max_high = max(current_node.max_high, current_node.left.max_high)	
 						current_node = current_node.parent
 		else: 	#The node to remove is intermediate
+			print "Removing intermediate node"
 			if node_to_remove.low_end <= node_to_remove.parent.low_end: #node is at the left
 				node_to_remove.parent.left = node_to_remove.left
 				rec_node = node_to_remove.parent
@@ -146,9 +153,11 @@ class IValTree(object):
 			", maximum high end of children = " + str(root.max_high) + ", positioned at level " + str((self.depth - self.findDepth(root) + 1)),
 			if root.parent is not None:
 				if root.low_end < root.parent.low_end:
-					print ", is left child of interval node " + "[" + str(root.parent.low_end) + "-" + str(root.parent.high_end) + "]"
+					print ", is left child of interval node " + "[" + str(root.parent.low_end) \
+					+ "-" + str(root.parent.high_end) + "]" + ' of value ' + str(root.parent.value)
 				else:
-					print ", is right child of interval node " + "[" + str(root.parent.low_end) + "-" + str(root.parent.high_end) + "]"
+					print ", is right child of interval node " + "[" + str(root.parent.low_end) \
+					+ "-" + str(root.parent.high_end) + "]" + ' of value ' + str(root.parent.value)
 			else:
 				print ", is root node"
 			self.printTree(root.left)
