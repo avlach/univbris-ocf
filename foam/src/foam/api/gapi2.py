@@ -63,8 +63,8 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 				},
 				"value" : {
 						"geni_api_versions" : {
-								'1' : 'https://localhost:3626/core/gapi1/',
-								'2' : 'https://localhost:3626/core/gapi2/'
+								'1' : 'https://localhost:3626/foam/gapi/1',
+								'2' : 'https://localhost:3626/foam/gapi/2'
 						},
 						"geni_request_rspec_versions" : [
 								{ 'type': 'geni',
@@ -330,13 +330,21 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 			raise e
 	
 	def pub_Shutdown(self, slice_urn, credentials, options):
-		if CredVerifier.checkValid(credentials, "shutdown", slice_urn):
-			self.recordAction("shutdown", credentials, slice_urn)
-			foam.lib.shutdown(slice_urn) #but this medthod is not within foam.lib!!! 
-			#Where is shutdown located then??? Help needed :)
-			#probably need to implement it from scratch
+		try:
+			if CredVerifier.checkValid(credentials, "shutdown", slice_urn):
+				self.recordAction("shutdown", credentials, slice_urn)
+					if GeniDB.getSliverURN(slice_urn) is None:
+						raise Fault("ShutdownSliver", "Sliver for slice URN (%s) does not exist" % (slice_urn))
+						return self.errorResult(12, "") #not sure if this is needed
+					sliver_urn = GeniDB.getSliverURN(slice_urn)
+					data = GeniDB.getSliverData(sliver_urn, True)
+					foam.geni.lib.deleteSliver(sliver_urn = sliver_urn)
+					#foam.task.emailGAPIDeleteSliver(data)
+					#foam.lib.shutdown(slice_urn) #but this medthod is not within foam.lib!!! 
+					#Where is shutdown located then??? Help needed :)
+					#probably need to implement it from scratch or just use deletesliver
+				return self.successResult(True)
 			return self.successResult(True)
-		return self.successResult(True)
 		
 	#additional methods from OMNI ref AM impl., to return results with proper codes and values
 	#we will see how we will use them
@@ -352,7 +360,18 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 								value="",
 								output=output)
 
-								
+	
+	#Expedient shoudld be able to get informed about free vlans
+	#but only using admin creds (a normal user cannot call this method)
+	def adm_ListFreeVLANs(self, credentials): #to be implemented
+		pass
+	
+	#Expedient shoudld be able to get the current switch topology
+	#but only using admin creds (a normal user cannot call this method)
+	def adm_CallCurrentTopology(self, credentials): #to be implemented
+		pass
+	
+
 #setup same as gapi1 (change version nums of course)
 def setup (app):
 	gapi2 = XMLRPCHandler('gapi2')
