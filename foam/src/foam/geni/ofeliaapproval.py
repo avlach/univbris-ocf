@@ -53,6 +53,14 @@ class MACConflict(ApprovalFailure):
 		self.mac = mac
 	def __str__ (self):
 		return "MAC Address (%s) is already reserved by another sliver." % (self.mac)
+		
+class IvalMACConflict(ApprovalFailure):
+	def __init__ (self, stmac, endmac):
+		super(IvalMACConflict, self).__init__()
+		self.stmac = stmac
+		self.endmac = endmac
+	def __str__ (self):
+		return "MAC Address Interval [%s-%s] clashes with another sliver." % (self.stmac, self.endmac)
 
 class EtherTypeConflict(ApprovalFailure):
 	def __init__ (self, dltype):
@@ -68,6 +76,14 @@ class VLANConflict(ApprovalFailure):
 	def __str__ (self):
 		return "VLAN (%s) is already reserved by another sliver." % (self.vlanid)
 		
+class IvalVLANConflict(ApprovalFailure):
+	def __init__ (self, stvlanid, endvlanid):
+		super(IvalVLANConflict, self).__init__()
+		self.stvlanid = stvlanid
+		self.endvlanid = endvlanid
+	def __str__ (self):
+		return "VLAN Interval [%s-%s] clashes with another sliver." % (self.stvlanid, self.endvlanid)
+		
 class IPSubnetConflict(ApprovalFailure):
 	def __init__ (self, subnet):
 		super(IPSubnetConflict, self).__init__()
@@ -75,12 +91,27 @@ class IPSubnetConflict(ApprovalFailure):
 	def __str__ (self):
 		return "IP Subnet (%s) is already reserved by another sliver." % (str(self.subnet))
 		
+class IvalIPSubnetConflict(ApprovalFailure):
+	def __init__ (self, stIP, endIP):
+		super(IvalIPSubnetConflict, self).__init__()
+		self.subnet = subnet
+	def __str__ (self):
+		return "IP Subnet (%s) clashes with another sliver." % (str(self.subnet))
+		
 class TPPortConflict(ApprovalFailure):
 	def __init__ (self, tpport):
 		super(TPPortConflict, self).__init__()
 		self.tpport = tpport
 	def __str__ (self):
 		return "Transport protocol port (%s) is already reserved by another sliver." % (self.tpport)
+		
+class IvalTPPortConflict(ApprovalFailure):
+	def __init__ (self, sttpport, endtpport):
+		super(IvalTPPortConflict, self).__init__()
+		self.sttpport = sttpport
+		self.endtpport = endtpport
+	def __str__ (self):
+		return "Transport protocol port Interval [%s-$s] clashes with another sliver." % (self.sttpport, self.endtpport)
 		
 		
 class of_ApprovalData(object):
@@ -96,10 +127,10 @@ class of_ApprovalData(object):
 		self._buildIValTrees(slivers)
 		
 	def _buildIValTrees(self, slivers): #dl type and NW proto not needed to ne handled by a tree structure
-		MACTree = MACIValTree()
-		VLANTree = VLANIValTree()
-		IPSubnetTree = IPSubnetIValTree()
-		TPPortTree = TPPortIValTree()
+		MACTree = MACIValTree([])
+		VLANTree = VLANIValTree([])
+		IPSubnetTree = IPSubnetIValTree([])
+		TPPortTree = TPPortIValTree([])
 		
 		for sliv in slivers:
 			fspecs = sliv.getFlowspecs()
@@ -119,7 +150,7 @@ class of_ApprovalData(object):
 								MACstop = intmac
 								newInterval = False
 							else:	#register the interval
-								MACTree.addIVal(MACTree, MACstart, MACstop, sliv.getURN())
+								MACTree.addIVal(MACTree.root, MACstart, MACstop, sliv.getURN())
 								newInterval = True
 					previntmac = intmac
 				
@@ -137,17 +168,18 @@ class of_ApprovalData(object):
 								VLANstop = intvlanid
 								newInterval = False
 							else:	#register the interval
-								VLANTree.addIVal(VLANTree, VLANstart, VLANstop, sliv.getURN())
+								VLANTree.addIVal(VLANTree.root, VLANstart, VLANstop, sliv.getURN())
 								newInterval = True
 					previntvlanid = intvlanid
 					
 				#build IP address tree from pool of IP subnets (first make them intervals)
 				for IPSub in fs.getIPSubnets():
-					IPSubLen = IP(IPSub).len()
-					[IPaddstr, NMstr] = IPSub.split("/")
-					IPstart = IP(IPaddstr).strDec()
-					IPstop = IPstart + IPSubLen
-					IPSubnetTree.addIVal(IPSubnetTree, IPstart, IPstop, sliv.getURN())
+					IPsubparsed = self.parseSubnet(IPSub)
+					IPSubLen = IP(IPSubparsed).len()
+					[IPnetstr, NMstr] = IPSubparsed.split("/")
+					IPstart = IP(IPnetstr).strDec()
+					IPstop = IPstart + IPSubLen - 1
+					IPSubnetTree.addIVal(IPSubnetTree.root, IPstart, IPstop, sliv.getURN())
 				
 				#build TP port tree from pool of TP ports
 				newInterval = True
@@ -163,18 +195,26 @@ class of_ApprovalData(object):
 								TPPortstop = tpport
 								newInterval = False
 							else:	#register the interval
-								TPPortTree.addIVal(TPPortTree, TPPortstart, TPPortstop, sliv.getURN())
+								TPPortTree.addIVal(TPPortTree.root, TPPortstart, TPPortstop, sliv.getURN())
 								newInterval = True
 					previnttpport = inttpport
-				 
-			
+		
+		self._macivtree = MACTree	 
+		self._vlanivtree = VLANTree
+		self._subnetivtree = IPSubnetTree
+		self._tpportivtree = TPPortTree
+		
 	def _initCore (self):
 		self._macs = set()
+		self._macivtree = set()
 		self._ethertypes = set()
 		self._vlans = set()
+		self._vlanivtree = set()
 		self._subnets = set()
-		self._nwprotos = set() #transport protocol over IP (UDP, TCP)
+		self._subnetivtree = set()
+		self._nwprotos = set()
 		self._tpports = set()
+		self._tpportivtree = set()
 		self._portgroups = {}
 		self._urns = set()
 	
@@ -237,36 +277,229 @@ class of_ApprovalData(object):
 		else:
 			return False
 	
+	def parseSubnet (self, netstr):
+		(i,pl) = netstr.split("/")
+		net = IP(i)
+		nm = IP(IPy._prefixlenToNetmask(int(pl), 4))
+		net.make_net(nm)
+		return net
+	
 	def validateSliver (self, sliver):
 		if not ConfigDB.getConfigItemByKey("geni.openflow.analysis-engine").getValue():
 			return
 
 		fspecs = sliver.getFlowspecs()
-	
-	
-			has_dps = False
-				dps = fs.getDatapaths()
-				if not dps:
-					raise NoDatapaths(fs)
-
-				pl = PortAlyzer(self._portgroups)
-				pl.validate(dps)
+		uncovered_fs = []
+		for fs in fspecs:
+			covered = False
+			
+			if fs.hasVLANs():
+				#check VLAN clash
+				covered = True
+				newInterval = True
+				previntvlanid = None
+				for vlanid in sorted(fs.getVLANs()):
+					intvlanid = int(vlanid)
+					if newInterval == True:	#new interval encountered
+						VLANstart = intvlanid
+						VLANstop = intvlanid
+					else:
+						if previntvlanid != None: 
+							if (intvlanid - previntvlanid) == 1:	#still within the interval
+								VLANstop = intvlanid
+								newInterval = False
+							else:	#find overlap if exists
+								ovList = self._vlanivtree.findOverlapIVal(self._vlanivtree.root, VLANstart, VLANstop, [])
+								if ovList != []:
+									raise IValVLANConflict(VLANstart, VLANstop)
+								newInterval = True
+					previntvlanid = intvlanid
+			
+			#check MAC clash
+			newInterval = True
+			previntmac = None
+			for mac in sorted(fs.getMACs()):
+				covered = True
+				intmac = mac_to_int(mac)
+				if newInterval == True:	#new interval encountered
+					MACstart = intmac
+					MACstop = intmac
+				else:
+					if previntmac != None: 
+						if (intmac - previntmac) == 1:	#still within the interval
+							MACstop = intmac
+							newInterval = False
+						else:	#find overlap if exists
+							ovList = self._macivtree.findOverlapIVal(self._macivtree.root, MACstart, MACstop, [])
+							if ovList != []:
+								raise IvalMACConflict(MACstart, MACstop)
+							newInterval = True
+				previntmac = intmac
 				
-				if fs.hasVLANs():
-					raise VLANPresence(fs)
+			#check dl type clash
+			for dltype in fs.getEtherTypes():
+				covered = True
+				if dltype == "0x806" or dltype == "0x800":
+					continue
+				if dltype in self._ethertypes:
+					raise EtherTypeConflict(dltype)
+				
+			#check IP subnet clash
+			for IPSub in fs.getIPSubnets():
+				covered = True
+				IPsubparsed = self.parseSubnet(IPSub)
+				IPSubLen = IP(IPSubparsed).len()
+				[IPnetstr, NMstr] = IPSubparsed.split("/")
+				IPstart = IP(IPnetstr).strDec()
+				IPstop = IPstart + IPSubLen - 1
+				ovList = self._subnetivtree.findOverlapIVal(self._subnetivtree.root, IPstart, IPstop, [])
+				if ovList != []:
+					raise IvalIPSubnetConflict(IP(IPsub))
+					
+			#check TP port clash
+			newInterval = True
+			previnttpport = None
+			for tpport in sorted(fs.getTPPorts()):
+				covered = True
+				inttpport = int(tpport)
+				if newInterval == True:	#new interval encountered
+					TPPortstart = inttpport
+					TPPortstop = inttpport
+				else:
+					if previnttpport != None: 
+						if (inttpport - prevtpport) == 1:	#still within the interval
+							TPPortstop = tpport
+							newInterval = False
+						else:	#find overlap if exists
+							ovList = self._tpportivtree.findOverlapIVal(self._tpportivtree.root, TPPortstart, TPPortstop, [])
+							if ovList != []:
+								raise IvalTPPortConflict(TPPortstart, TPPortstop)
+							newInterval = True
+				previnttpport = inttpport
+					
+			has_dps = False
+			dps = fs.getDatapaths()
+			if not dps:
+				raise NoDatapaths(fs)
 
-				if not covered:
-					uncovered_fs.append(fs)
+			pl = PortAlyzer(self._portgroups)
+			pl.validate(dps)
+		
+			if not covered:
+				uncovered_fs.append(fs)
 
 		if uncovered_fs:
 			raise UncoveredFlowspecs(uncovered_fs)
 			
 	def addSliver (self, sliver):
-
-
-
+		fspecs = sliver.getFlowspecs()
 		
+		for fs in fspecs:
+			#add macs old style
+			for mac in fs.getMACs():
+				self._macs.add(mac)
+			#add intervalized macs (new style)
+			newInterval = True
+			previntmac = None
+			for mac in sorted(fs.getMACs()):
+				intmac = mac_to_int(mac)
+				if newInterval == True:	#new interval encountered
+					MACstart = intmac
+					MACstop = intmac
+				else:
+					if previntmac != None: 
+						if (intmac - previntmac) == 1:	#still within the interval
+							MACstop = intmac
+							newInterval = False
+						else:	#register the interval
+							self._macivtree.addIVal(self._macivtree.root, MACstart, MACstop, sliver.getURN())
+							newInterval = True
+				previntmac = intmac
+				
+				#add dltypes old style
+				for dltype in fs.getEtherTypes():
+				if dltype == "0x806" or dltype == "0x800":
+					continue
+				self._ethertypes.add(dltype)
+				
+				#add vlans old style
+				for vlanid in fs.getVLANs():
+					self._vlans.add(vlanid)
+				#add intervalized vlans (new style)
+				newInterval = True
+				previntvlanid = None
+				for vlanid in sorted(fs.getVLANs()):
+					intvlanid = int(vlanid)
+					if newInterval == True:	#new interval encountered
+						VLANstart = intvlanid
+						VLANstop = intvlanid
+					else:
+						if previntvlanid != None: 
+							if (intvlanid - previntvlanid) == 1:	#still within the interval
+								VLANstop = intvlanid
+								newInterval = False
+							else:	#register the interval
+								self._vlanivtree.addIVal(self._vlanivtree.root, VLANstart, VLANstop, sliver.getURN())
+								newInterval = True
+					previntvlanid = intvlanid
+				
+				#add IP subnets old style
+				for subnet in fs.getIPSubnets():
+					net = IP(subnet)
+					self._subnets.add(net)
+				#add intervalized IP subnets
+				for IPSub in fs.getIPSubnets():
+					IPsubparsed = self.parseSubnet(IPSub)
+					IPSubLen = IP(IPSubparsed).len()
+					[IPnetstr, NMstr] = IPSubparsed.split("/")
+					IPstart = IP(IPnetstr).strDec()
+					IPstop = IPstart + IPSubLen - 1
+					self._subnetivtree.addIVal(self._subnetivtree.root, IPstart, IPstop, sliver.getURN())
+					
+				#add NW protos old style
+				for nwprot in fs.getNWProtos():
+					self._nwprotos.add(nwprot)
+					
+				#add TP ports old style
+				for tpp in fs.getTPPorts():
+					self._tpports.add(tpp)
+				#add intervalized TP ports (new style)
+				newInterval = True
+				previnttpport = None
+				for tpport in sorted(fs.getTPPorts()):
+					inttpport = int(tpport)
+					if newInterval == True:	#new interval encountered
+						TPPortstart = inttpport
+						TPPortstop = inttpport
+					else:
+						if previnttpport != None: 
+							if (inttpport - prevtpport) == 1:	#still within the interval
+								TPPortstop = tpport
+								newInterval = False
+							else:	#register the interval
+								self._tpportivtree.addIVal(self._tpportivtree.root, TPPortstart, TPPortstop, sliver.getURN())
+								newInterval = True
+					previnttpport = inttpport
+				
+	def iterMACs (self):
+    for x in self._macs: yield x
+
+  def iterEthertypes (self):
+    for x in self._ethertypes: yield x
+	
+	def iterVLANs (self):
+		for x in self._vlans yield x
 		
+  def iterSubnets (self):
+    for x in self._subnets: yield x
+		
+	def iterNWProtos (self):
+		for x in self._nwprotos yield x
+	
+	def iterTPPorts (self):
+		for x in self._tpports yield x
+		
+
 from foam.core.configdb import ConfigDB
 
 of_AppData = of_ApprovalData(GeniDB.getSliverList(False, True, True))

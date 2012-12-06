@@ -360,14 +360,8 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 								value="",
 								output=output)
 
-	
-	#Expedient shoudld be able to get informed about free vlans
-	#but only using admin creds (a normal user cannot call this method)
-	def adm_ListFreeVLANs(self, credentials): #to be implemented
-		pass
-	
 	#Expedient shoudld be able to get the current switch topology
-	#but only using admin creds (a normal user cannot call this method)
+	#but only using superuser creds (a normal user cannot call this method)
 	def adm_CallCurrentTopology(self, credentials): #to be implemented
 		pass
 	

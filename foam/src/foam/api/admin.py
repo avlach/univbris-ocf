@@ -376,7 +376,43 @@ class AdminAPIv1(Dispatcher):
       self._log.exception("Exception")
       return jsonify(None, code = 2, msg  = traceback.format_exc())
 
-
+	#Vasileios's code for listing free vlans
+	@route('/core/admin/list-free-vlans', methods=["POST"])
+	def adminListFreeVLANs (self):
+		try:
+			if not request.json:
+						return ""
+					
+			globalvlanlist = {}
+			for i in range(4095):
+				globalvlanlist[i] = "free"
+			
+			slivers = GeniDB.getSliverList(False, True, True)
+			for sliv in slivers:
+				fspecs = sliv.getFlowspecs()
+				for fs in fspecs:
+					for vlanid in fs.getVLANs():
+						globalvlanlist[i] == "occupied"
+			
+			freevlanlist = []
+			for i in globalvlanlist.iterkeys():
+				if globalvlanlist[i] == "free":
+				freevlanlist.append(i)	
+				
+			occupiedvlanlist = []
+			for i in globalvlanlist.iterkeys():
+				if globalvlanlist[i] == "occupied":
+				occupiedvlanlist.append(i)	
+			
+			return jsonify({"free-vlans" : freevlanlist})
+			
+    except JSONValidationError, e:
+      jd = e.__json__()
+      return jsonify(jd, code = 1, msg = jd["exception"])
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg = traceback.format_exc())
+	
 
 def setup (app):
   api = AdminAPIv1(app)
