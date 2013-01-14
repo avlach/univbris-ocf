@@ -14,6 +14,7 @@ import foam.lib
 import foam.geni.lib
 from foam.geni.db import GeniDB
 from foam.core.configdb import ConfigDB
+import foam.ofeliasettings.vlanset as ofvlset
 
 class AdminAPIv1(Dispatcher):
   def __init__ (self, app):
@@ -376,35 +377,38 @@ class AdminAPIv1(Dispatcher):
       self._log.exception("Exception")
       return jsonify(None, code = 2, msg  = traceback.format_exc())
 
-	#Vasileios's code for listing free vlans
-	@route('/core/admin/list-free-vlans', methods=["POST"])
-	def adminListFreeVLANs (self):
-		try:
-			if not request.json:
-						return ""
-					
-			globalvlanlist = {}
+	#VLAN handling code-base start
+	
+	#Vasileios's code for listing free vlans (before Leo's vlancontroller)
+	@route('/core/admin/list-vlans', methods=["POST"])
+	def adminListVLANs (self):
+		if not request.json:
+			return
+		try:			
+			global_vlan_list = {}
 			for i in range(4095):
-				globalvlanlist[i] = "free"
+				global_vlan_list[i] = "free"
 			
 			slivers = GeniDB.getSliverList(False, True, True)
 			for sliv in slivers:
 				fspecs = sliv.getFlowspecs()
 				for fs in fspecs:
 					for vlanid in fs.getVLANs():
-						globalvlanlist[i] == "occupied"
+						global_vlan_list[i] == "allocated"
 			
-			freevlanlist = []
-			for i in globalvlanlist.iterkeys():
-				if globalvlanlist[i] == "free":
-				freevlanlist.append(i)	
+			free_vlan_list = []
+			for i in global_vlan_list.iterkeys():
+				if global_vlan_list[i] == "free":
+				free_vlan_list.append(i)	
+			free_vlan_list.sort()
 				
-			occupiedvlanlist = []
-			for i in globalvlanlist.iterkeys():
-				if globalvlanlist[i] == "occupied":
-				occupiedvlanlist.append(i)	
+			allocated_vlan_list = []
+			for i in global_vlan_list.iterkeys():
+				if global_vlan_list[i] == "allocated":
+				allocated_vlan_list.append(i)	
+			allocated_vlan_list.sort()
 			
-			return jsonify({"free-vlans" : freevlanlist})
+			return jsonify({"free-vlans" : free_vlan_list, "allocated-vlans" : allocated_vlan_list})
 			
     except JSONValidationError, e:
       jd = e.__json__()
@@ -413,6 +417,76 @@ class AdminAPIv1(Dispatcher):
       self._log.exception("Exception")
       return jsonify(None, code = 2, msg = traceback.format_exc())
 	
+	#see optin optin_manager/python/openflow/optin_manager/vlans/vlanController.py for the source
+	#of the following methods
+	
+	#Vasileios: adapt vlanController.get_allocated_vlans method
+	@route('/core/admin/list-allocated-vlans', methods=["POST"])
+	def adminListAllocatedVlans(self):
+		if not request.json:
+			return
+		try:
+			used_vlans = []
+			slivers = GeniDB.getSliverList(False, True, True)
+			for sliv in slivers:
+				fspecs = sliv.getFlowspecs()
+				for fs in fspecs:
+					for vlanid in fs.getVLANs():
+						used_vlans.append(vlanid)
+			used_vlans.sort()
+			
+			return jsonify({"allocated-vlans" : used_vlans})
+							
+		except JSONValidationError, e:
+      jd = e.__json__()
+      return jsonify(jd, code = 1, msg = jd["exception"])
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg = traceback.format_exc())
+	
+	#Vasileios: adapt vlanController.get_allocated_vlans_sorted method
+	@route('/core/admin/list-allocated-vlans-sorted', methods=["POST"])
+	def adminListAllocatedVlansSorted(self):
+		if not request.json:
+			return
+		try:		
+			used_vlans = self.adminListAllocatedVlans()
+			sorted_vlans = [0 for x in xrange(4)]
+			sorted_vlans[0] = [x for x in used_vlans if x <= 1000]
+			sorted_vlans[1] = [x for x in used_vlans if x > 1000 and x <= 2000]
+			sorted_vlans[2] = [x for x in used_vlans if x > 2000 and x <= 3000]
+			sorted_vlans[3] = [x for x in used_vlans if x > 3000]
+			
+			return jsonify({"allocated-vlans-sorted" : sorted_vlans})
+		
+		except JSONValidationError, e:
+      jd = e.__json__()
+      return jsonify(jd, code = 1, msg = jd["exception"])
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg = traceback.format_exc())
+	
+	#Vasileios: adapt vlanController.offer_vlan_tags method
+	@route('/core/admin/offer-vlan-tags', methods=["POST"])
+	def adminOfferVlanTags(self, set=None):
+		if not request.json:
+			return
+		try:
+			if not set:
+				returnval = [x for x in range(1,4095) if x not in self.adminListAllocatedVlans() and x not in ofvlset.UNALLOWED_VLANS]
+			elif set in range(1,4095):
+				returnval = [x for x in range(1,4095) if x not in self.adminListAllocatedVlans() and x not in ofvlset.UNALLOWED_VLANS][:set]  
+			
+			return jsonify({"offered-vlan-tags" : returnval})
+			
+		except JSONValidationError, e:
+      jd = e.__json__()
+      return jsonify(jd, code = 1, msg = jd["exception"])
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg = traceback.format_exc())
+			
+	#VLAN handling code-base end
 
 def setup (app):
   api = AdminAPIv1(app)
