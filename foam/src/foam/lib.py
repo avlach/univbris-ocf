@@ -154,6 +154,23 @@ class FlowSpec(object):
       yield x
     for x in self.__nwdst:
       yield x
+			
+	#start of Vasileios's code (get the rest of the flowspec data)
+	def getVLANs (self):
+		for x in self.__vlanid:
+			yield x
+
+	def getNWProtos (self):
+		for x in self.__nwproto:
+			yield x
+		
+	def getTPPorts (self):
+		for x in self.__tpsrc:
+			yield x
+		for x in self.__tpdst:
+			yield x
+	
+	#end of Vasileios's code
 
   def getDatapaths (self):
     return self.bound_datapaths.values()
