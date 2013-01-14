@@ -13,9 +13,9 @@ CONFIGDB_ENGINE = "sqlite:///%s" % (CONFIGDB_PATH)
 HTPASSWDFILE = "%s/etc/users.htpasswd" % (FOAM_ROOT)
 GENICERTDIR = "%s/etc/gcf-ca-certs" % (FOAM_ROOT)
 
-OFNSv3 = "http://www.geni.net/resources/rspec/ext/openflow/3"
-OFNSv4 = "http://www.geni.net/resources/rspec/ext/openflow/4"
-PGNS = "http://www.geni.net/resources/rspec/3"
+OFNSv3 = "%s/schemas" % (FOAM_ROOT)
+OFNSv4 = "%s/schemas" % (FOAM_ROOT)
+PGNS = "%s/schemas" % (FOAM_ROOT)
 XSNS = "http://www.w3.org/2001/XMLSchema-instance"
 
 LOGLEVEL = logging.INFO

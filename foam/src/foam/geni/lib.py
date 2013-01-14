@@ -23,15 +23,15 @@ from foam.flowvisor import Connection as FV
 from foam.core.json import jsonify, jsonValidate, JSONValidationError
 from foam.core.exception import CoreException
 from foam.creds import CredVerifier
-from foam.lib import NoGroupName, FlowSpec, _asUTC
+from foam.lib import NoGroupName, VirtualLink, FlowSpec, _asUTC
 from foam.core.configdb import ConfigDB
 from foam.geni.db import GeniDB, getManagerID, generateSwitchComponentID, UnknownSliver
 from foam.geni.topology import TopoDB
 import foam.geni.approval
 
-OFNSv3 = "http://www.geni.net/resources/rspec/ext/openflow/3"
-OFNSv4 = "http://www.geni.net/resources/rspec/ext/openflow/4"
-PGNS = "http://www.geni.net/resources/rspec/3"
+OFNSv3 = "/opt/foam/schemas"
+OFNSv4 = "/opt/foam/schemas"
+PGNS = "/opt/foam/schemas"
 XSNS = "http://www.w3.org/2001/XMLSchema-instance"
 
 def deleteSliver (slice_urn = None, sliver_urn = None):
@@ -80,8 +80,15 @@ def addAdDevice (rspec, dpid, active=True):
         a.attrib["remote_component_id"] = info.remote_component_id
         a.attrib["remote_port"] = info.remote_port
         a.attrib["desc"] = info.desc
-        
-
+#getLinks START 
+def addAdLink (rspec, link):
+  od = ET.SubElement(rspec, "{%s}link" % (OFNSv3))     
+  od.attrib["srcDPID"] = link["srcDPID"]
+  od.attrib["srcPort"] = link["srcPort"]
+  od.attrib["dstDPID"] = link["dstDPID"]
+  od.attrib["dstPort"] = link["dstPort"]
+#getLinks END 
+  
 def getAdvertisement ():
   NSMAP = {None: "%s" % (PGNS),
           "xs" : "%s" % (XSNS),
@@ -94,6 +101,7 @@ def getAdvertisement ():
               "http://www.geni.net/resources/rspec/ext/openflow/3/of-ad.xsd"
   rspec.attrib["type"] = "advertisement"
 
+  links = FV.getLinkList()
   devices = FV.getDeviceList()
   db_devices = GeniDB.getDeviceSet()
   GeniDB.refreshDevices(devices)
@@ -104,6 +112,11 @@ def getAdvertisement ():
 
   for dpid in db_devices:
     addAdDevice(rspec, dpid, False)
+ 
+#getLinks START    
+  for link in links:
+    addAdLink(rspec, link)
+#getLinks END 
     
   xml = StringIO()
   ET.ElementTree(rspec).write(xml)
@@ -129,6 +142,7 @@ def approveSliver (request, logger):
 
     sobj.createSlice()
     sobj.insertFlowspace(request.json["priority"])
+    sobj.insertVirtualLink()
 
     data = GeniDB.getSliverData(sobj.getURN(), True)
     foam.task.emailApproveSliver(data)
@@ -344,7 +358,7 @@ class GENISliver(foam.flowvisor.FSAllocation):
     return c
 
   def __parseDatav3 (self, dom):
-    sliver_dom = dom.find('{%s}sliver' % (OFNSv3))
+    sliver_dom = dom.find('{%s}sliver' % (OFNSv3))  
     if sliver_dom is None:
       raise NoSliverTag()
     self.setEmail(sliver_dom.get("email", None))
@@ -371,10 +385,16 @@ class GENISliver(foam.flowvisor.FSAllocation):
 #          continue
       self.addGroup(grpname, dplist)
 
+    
     matches = sliver_dom.findall('{%s}match' % (OFNSv3))
     for flowspec in matches:
       fs = self.parseFlowSpec(flowspec, OFNSv3)
       self.addFlowSpec(fs)
+        
+    vlinks = sliver_dom.findall('{%s}vlink' % (OFNSv3))
+    for virtuallink in vlinks:
+      vl = self.parseVirtualLink(virtuallink, OFNSv3)
+      self.addVirtualLink(vl)
 
   def validate (self):
     super(GENISliver, self).validate()
@@ -435,7 +455,26 @@ class GENISliver(foam.flowvisor.FSAllocation):
   def generateURN (self, slice_urn):
     self.__slice_urn = slice_urn
     return "%s:%s" % (slice_urn, self.getUUID())
-
+    
+  def parseVirtualLink (self, elem, ns):
+    vl = VirtualLink()
+    
+    hopsdom = elem.find("{%s}hops" % (ns))
+    if hopsdom is None:
+      raise NoHopsTag(elem)
+      
+    #TODO: put the "use-group" stuff here
+    
+    linkstr = ""
+    hops = hopsdom.findall('{%s}hop' % (ns))
+    for hop in hops:
+      hopstr = hop.get("link").strip()
+      if hop.get("index").strip() is not "1": 
+        linkstr += ","
+      linkstr += hopstr     
+    vl.addVLinkFromString(linkstr)  
+    return vl
+  
   def parseFlowSpec (self, elem, ns):
     fs = FlowSpec()
 
@@ -499,7 +538,7 @@ class GENISliver(foam.flowvisor.FSAllocation):
     for elem in nodes:
       tpdst = elem.get("value").strip()
       fs.addTpDstFromString(tpdst)
-
+  
     return fs
 
     

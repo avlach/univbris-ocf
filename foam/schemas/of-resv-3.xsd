@@ -21,6 +21,12 @@
       <xs:pattern value="([0-9a-fA-F]{2}[:]{0,1}){7}[0-9a-fA-F]{2}"/>
     </xs:restriction>
   </xs:simpleType>
+  
+  <xs:simpleType name="VirtualLinkHop">
+    <xs:restriction base="xs:token">
+      <xs:pattern value="([0-9a-fA-F]{2}[:]){7}[0-9a-fA-F]{2}[/][0-9]{1,}[-]{1}([0-9a-fA-F]{2}[:]){7}[0-9a-fA-F]{2}[/][0-9]{1,}"/>
+    </xs:restriction>
+  </xs:simpleType>
 
   <xs:simpleType name="EtherAddr">
     <xs:restriction base="xs:token">
@@ -89,7 +95,47 @@
             </xs:sequence>
             <xs:attribute name="name" type="xs:token" use="required" />
           </xs:complexType>
+        </xs:element>     
+        
+        <xs:element name="vlink" minOccurs="1" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="use-group" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:token" use="required" />
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="datapath" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="port" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:attribute name="num" type="xs:unsignedInt" use="required" />
+                        <xs:attribute name="name" type="xs:token" use="optional" />
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="component_id" type="openflow:URN" use="required" />
+                  <xs:attribute name="component_manager_id" type="openflow:URN" use="required" />
+                  <xs:attribute name="dpid" type="openflow:DatapathID" use="optional" />
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="hops" minOccurs="1">
+                <xs:complexType>
+                  <xs:choice minOccurs="0" maxOccurs="unbounded">
+                    <xs:element name="hop" minOccurs="1" maxOccurs="unbounded">
+                      <xs:complexType>
+                      	<xs:attribute name="index" type="xs:unsignedInt" use="required" />
+                        <xs:attribute name="link" type="openflow:VirtualLinkHop" use="required" />
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:choice>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
+        
         <xs:element name="match" minOccurs="1" maxOccurs="unbounded">
           <xs:complexType>
             <xs:sequence>

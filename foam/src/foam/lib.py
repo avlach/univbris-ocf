@@ -8,6 +8,7 @@ import traceback
 import pprint
 import copy
 import dateutil
+import logging
 
 from foam.core.exception import CoreException
 from foam.core.configdb import ConfigDB
@@ -71,6 +72,28 @@ def _asUTC(dt):
       dt = dt.replace(tzinfo=tz_utc)
     return dt
 
+class VirtualLink(object):
+  def __init__ (self):
+    self.bound_datapaths = {}
+    self.__vlinks = []
+    
+  def __str__ (self):
+    return "virtual_link: %s" % (",".join([str(x) for x in self.__vlinks]))
+    
+  def bindDatapath (self, dp):
+    if dp.dpid in self.bound_datapaths:
+      self.bound_datapaths[dp.dpid].merge(dp)
+    else:
+      self.bound_datapaths[dp.dpid] = copy.deepcopy(dp)
+      
+  def generateVLinkEntries (self):
+    vlrules = []
+    for entry in self.__vlinks:
+      if entry: vlrules.append(entry)
+    return vlrules
+      
+  def addVLinkFromString (self, vstr):
+    self.__vlinks.append(vstr.strip())
 
 class FlowSpec(object):
   def __init__ (self):
@@ -131,24 +154,7 @@ class FlowSpec(object):
       yield x
     for x in self.__nwdst:
       yield x
-			
-	#start of Vasileios's code (get the rest of the flowspec data)
-	def getVLANs (self):
-		for x in self.__vlanid:
-			yield x
-			
-	def getNWProtos (self):
-		for x in self.__nwproto:
-			yield x
-			
-	def getTPPorts (self):
-		for x in self.__tpsrc:
-			yield x
-		for x in self.__tpdst:
-			yield x
-	
-	#end of Vasileios's code
-	
+
   def getDatapaths (self):
     return self.bound_datapaths.values()
 
@@ -208,9 +214,9 @@ class FlowSpec(object):
         e.append("%s" % ",".join(m))
       else:
         e.append("any")
-
+        
       fsrules.append(e)
-
+      
     return fsrules
 
   def addDlSrcFromString (self, vstr):
@@ -226,7 +232,7 @@ class FlowSpec(object):
   def addDlTypeFromString (self, vstr):
     for dltype in vstr.split(","):
       self.__dltype.append(dltype.strip())
-
+  
   def addVlanIDFromString (self, vstr):
     for vlid in vstr.split(","):
       if vlid.count("-"):
@@ -297,3 +303,9 @@ class NoControllersDefined(CoreException):
     super(NoControllersDefined, self).__init__()
   def __str__ (self):
     return "No controllers are defined for this request."
+    
+class NoHopsTag(CoreException):
+  def __init__ (self):
+    super(NoHopsTag, self).__init__()
+  def __str__ (self):
+    return "VirtualLink does not contain the list of hops."    

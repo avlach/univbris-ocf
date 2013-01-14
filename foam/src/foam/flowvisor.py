@@ -141,6 +141,10 @@ class _Connection(object):
   def changeFlowspace (self, opslist):
     self.log.debug("XMLRPC:changeFlowSpace")
     self.xmlcall("changeFlowSpace", opslist)
+  
+  def addVirtualLink (self, slice_name,action):
+    self.log.debug("XMLRPC:addVirtualLink")
+    self.xmlcall("addLink", slice_name,action)
 
   def updateInfo (self, key, value):
     if key == "flowvisor.hostname":
@@ -169,14 +173,16 @@ class FSAllocation(foam.core.allocation.Allocation):
 
     self._groups = {}
     self._flowspecs = []
+    self._virtuallinks = []
     self._controllers = []
 
   def __str__ (self):
     x = super(FSAllocation, self).__str__()
-    return "<FV:Allocation:\n Controllers:\n%s\n Groups:\n%s\n Flowspace:\n%s>\n%s" % (
+    return "<FV:Allocation:\n Controllers:\n%s\n Groups:\n%s\n Flowspace:\n%s\n VirtualLinks:\n%s>\n" % (
       "\n  ".join([str(x) for x in self._controllers]),
       "\n  ".join(["%s: %s" % (k, "\n   ".join(str(x) for x in v)) for k,v in self._groups.iteritems()]),
-      "\n  ".join([str(x) for x in self._flowspecs]), x)
+      "\n  ".join([str(x) for x in self._flowspecs]), 
+      "\n  ".join([str(x) for x in self._virtuallinks]))
 
   def getDataDict (self, detail = True):
     obj = super(FSAllocation, self).getDataDict(detail)
@@ -191,6 +197,9 @@ class FSAllocation(foam.core.allocation.Allocation):
 
   def getFlowspecs (self):
     return self._flowspecs
+  
+  def getVirtualLinks (self):
+    return self._virtuallinks
 
   def getControllers (self):
     return self._controllers
@@ -210,6 +219,9 @@ class FSAllocation(foam.core.allocation.Allocation):
 
   def addFlowSpec (self, fs):
     self._flowspecs.append(fs)
+   
+  def addVirtualLink (self, vl):
+    self._virtuallinks.append(vl)
 
   def getGroupDatapaths (self, gname):
     return self._groups[gname]
@@ -244,8 +256,19 @@ class FSAllocation(foam.core.allocation.Allocation):
         match = "OFMatch[]"
       ops.append({"operation" : "ADD", "dpid" : entry[0], "priority" : str(entry[1]),
         "match" : match, "actions" : action})
-
     Connection.changeFlowspace(ops)
+  
+  def generateVLinkEntries (self):
+    entries = []
+    for fs in self._virtuallinks:
+      entries.extend(fs.generateVLinkEntries())
+    return entries
+    
+  def insertVirtualLink (self):
+    vlinks = self.generateVLinkEntries()
+    slicename = "%s" % (self.getUUID())
+    for action in vlinks:
+      Connection.addVirtualLink(slicename,action)
 
 from foam.core.configdb import ConfigDB, ConfigItem, coerceBool
 
