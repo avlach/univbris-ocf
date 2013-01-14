@@ -51,7 +51,7 @@ class IValTree(object):
 				found_value = 1
 				break
 		if found_value == 0:
-			print "Unable to find overlappingg interval with correct value!"
+			print "Unable to find overlapping interval with correct value!"
 			return root
 		node_to_remove = iValList[i]
 		if node_to_remove is None:
