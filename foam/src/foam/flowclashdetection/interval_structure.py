@@ -10,6 +10,7 @@
 #-- https://github.com/misshie/interval-tree/blob/master/lib/interval_tree.rb
 #-- http://code.activestate.com/recipes/457411-an-interval-mapping-data-structure/ 
 
+from lxml import etree
 
 class IValNode(object):
 	
@@ -145,7 +146,7 @@ class IValTree(object):
 		else:
 			return self.size(root.left) + 1 + self.size(root.right)
 			
-	def printTree(self, root):
+	def printTreeString(self, root):
 		if root is None:
 			pass
 		else:
@@ -162,6 +163,29 @@ class IValTree(object):
 				print ", is root node"
 			self.printTree(root.left)
 			self.printTree(root.right)
+	
+	#work to be done here------------------------------------Vasileios
+	#XML format style:
+	#<root>
+	#	<low_end> % </low_end>
+	#	<high_end> % </high_end>
+	# <max_high> % </max_high>
+	# <value> % </value>
+	# <left_child> ...
+	# </left_child>
+	# <right_child> ...
+	# </right_child>
+	#</root>
+	def formXMLTree(self, root):
+		if root is None:
+			pass
+		else:
+			if root.parent is None:
+				xmlroot = 
+			else:
+			
+			self.formXMLTree(root.left)
+			self.formXMLTree(root.right)
 			
 	def printOverlapList(self, ovList, ovIvalStart, ovIvalStop):
 		print "Overlapping intervals with " + "[" + str(ovIvalStart) + "-" + str(ovIvalStop) + "] :"

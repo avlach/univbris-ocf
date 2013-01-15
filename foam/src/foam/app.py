@@ -58,6 +58,9 @@ admin.setup(app)
 from foam.api import geni
 geni.setup(app)
 
+from foam.api import legacyexpedientapi
+legacyexpedientapi.setup(app)
+
 ConfigDB.commit()
 GeniDB.commit()
 

@@ -43,4 +43,14 @@ def long_to_dpid(l):
     s = "%016x" % long(l)
     m = re.findall("\w\w", s)
     return ":".join(m)
+		
+def parseFVexception(e,s=""):
+	try:
+		r = re.findall("<(.*?)>",str(e))
+	except Exception,a:
+		return "!!"+s+str(e)+"!!"
+	if r:
+		return "!!"+s+r[0].split(":")[-1]+"!!"
+	else:
+		return "!!"+s+str(e)+"!!"
 
