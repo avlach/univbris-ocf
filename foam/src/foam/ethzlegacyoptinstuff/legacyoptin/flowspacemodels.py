@@ -1,5 +1,5 @@
 from django.db import models
-from foam.legacyoptin.flowspaceutils import int_to_mac, int_to_dotted_ip
+from foam.ethzlegacyoptinstuff.legacyoptin.flowspaceutils import int_to_mac, int_to_dotted_ip
 
 class FlowSpace(models.Model):
     mac_src_s           = models.BigIntegerField("Start Source MAC address", null=True, default=0x000000000000)

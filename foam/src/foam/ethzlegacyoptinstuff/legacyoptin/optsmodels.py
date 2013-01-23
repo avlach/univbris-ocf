@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib import auth
-from foam.legacyoptin.flowspacemodels import FlowSpace
+from foam.ethzlegacyoptinstuff.legacyoptin.flowspacemodels import FlowSpace
 
 class UserFlowSpace(FlowSpace):
     '''
