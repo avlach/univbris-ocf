@@ -29,6 +29,8 @@ class IValTree(object):
 	def __init__(self):
 		self.root = None
 		self.depth = 0
+		self.MIN = 0
+		self.MAX = 1000000000
 		
 	def addIVal(self, root, start, stop, value):
 		if root is None:
@@ -81,9 +83,29 @@ class IValTree(object):
 						current_node.max_high = max(current_node.max_high, current_node.left.max_high)	
 						current_node = current_node.parent
 		else: 	#The node to remove is intermediate
-			print "Removing intermediate node"
+			print "Removing intermediate node, rebalancing tree from scratch"
+			allnodes = self.findOverlapIVal(self.root, self.MIN, self.MAX, [])
+			tempTree = IValTree()
+			for nd in allnodes:
+				if nd != node_to_remove: 
+					tempTree.root = tempTree.addIVal(tempTree.root,	nd.low_end, nd.high_end, nd.value)
+				else:
+					print "found node to be removed, ignoring it for the formation of new tree"
+			root = tempTree.root	
+			self.depth = tempTree.depth
+
+			#old code
+			'''
 			if node_to_remove.low_end <= node_to_remove.parent.low_end: #node is at the left
-				node_to_remove.parent.left = node_to_remove.left
+				print "node is at the left"	
+				if node_to_remove.left is None:
+					node_to_remove.parent.left = node_to_remove.right
+				elif node_to_remove.right is None:
+					node_to_remove.parent.left = node_to_remove.left
+				else:				
+					node_to_remove.right.parent = node_to_remove.left.right
+				
+
 				rec_node = node_to_remove.parent
 				while rec_node.parent is not None:
 					if rec_node.right is None:
@@ -99,6 +121,7 @@ class IValTree(object):
 							max(rec_node.right.max_high,rec_node.right.high_end))
 					rec_node = rec_node.parent
 			else: #node is at the right
+				print "node is at the right"
 				node_to_remove.parent.right = node_to_remove.right
 				rec_node = node_to_remove.parent
 				while rec_node.parent is not None:
@@ -115,7 +138,7 @@ class IValTree(object):
 							max(rec_node.right.max_high,rec_node.right.high_end))
 					rec_node = rec_node.parent
 		node_to_remove = None
-		self.depth = self.findDepth(root)
+		'''
 		return root
 			
 	def findOverlapIVal(self, root, start, stop, cList):
@@ -153,7 +176,7 @@ class IValTree(object):
 			print "Interval [" + str(root.low_end) + "-" + str(root.high_end) + "] : value = " + str(root.value) + \
 			", maximum high end of children = " + str(root.max_high) + ", positioned at level " + str((self.depth - self.findDepth(root) + 1)),
 			if root.parent is not None:
-				if root.low_end < root.parent.low_end:
+				if root.low_end <= root.parent.low_end:
 					print ", is left child of interval node " + "[" + str(root.parent.low_end) \
 					+ "-" + str(root.parent.high_end) + "]" + ' of value ' + str(root.parent.value)
 				else:
@@ -161,8 +184,8 @@ class IValTree(object):
 					+ "-" + str(root.parent.high_end) + "]" + ' of value ' + str(root.parent.value)
 			else:
 				print ", is root node"
-			self.printTree(root.left)
-			self.printTree(root.right)
+			self.printTreeString(root.left)
+			self.printTreeString(root.right)
 	
 	#work to be done here------------------------------------Vasileios
 	#XML format style:
@@ -176,6 +199,7 @@ class IValTree(object):
 	# <right_child> ...
 	# </right_child>
 	#</root>
+	'''	
 	def formXMLTree(self, root):
 		if root is None:
 			pass
@@ -186,6 +210,7 @@ class IValTree(object):
 			
 			self.formXMLTree(root.left)
 			self.formXMLTree(root.right)
+	'''
 			
 	def printOverlapList(self, ovList, ovIvalStart, ovIvalStop):
 		print "Overlapping intervals with " + "[" + str(ovIvalStart) + "-" + str(ovIvalStop) + "] :"

@@ -14,17 +14,17 @@ if __name__ == '__main__':
 	ivtree.root = ivtree.addIVal(ivtree.root, 30, 50, "slice8")
 	ivtree.root = ivtree.addIVal(ivtree.root, 20, 60, "slice9")
 	print "This is the tree:"
-	ivtree.printTree(ivtree.root)
+	ivtree.printTreeString(ivtree.root)
 	print "Removal tests......................................."
 	print "Test 2"
 	ivtree.printOverlapList(ivtree.findOverlapIVal(ivtree.root, 30, 40, []), 30, 40)
 	print "Test 3"
 	ivtree.root = ivtree.remIVal(ivtree.root, 10, 20, "slice1")
-	ivtree.printTree(ivtree.root)
+	ivtree.printTreeString(ivtree.root)
 	print "Test 4"
 	ivtree.root = ivtree.remIVal(ivtree.root, 20, 60, "slice3")
-	ivtree.printTree(ivtree.root)
+	ivtree.printTreeString(ivtree.root)
 	print "Test 5"
 	ivtree.root = ivtree.remIVal(ivtree.root, 30, 50, "slice2")
-	ivtree.printTree(ivtree.root)
+	ivtree.printTreeString(ivtree.root)
 	
