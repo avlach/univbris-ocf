@@ -1,18 +1,23 @@
 # Copyright (c) 2012  Nick Bastin
 
 import traceback
+import datetime
 
 from flask import request
 
+from foam.config import FOAM_ROOT
 from foam.api.jsonrpc import Dispatcher, route
 from foam.core.json import jsonify, jsonValidate, JSONValidationError
+from foam.core.configdb import ConfigDB, ConfigItem
+from foam.geni.topology import Attachment, TopoDB
 from foam.geni.approval import AppData
-from foam.core.configdb import ConfigDB
+
 
 class GENIAPIv1(Dispatcher):
   def __init__ (self, app):
     super(GENIAPIv1, self).__init__("GENI v1", app.logger, app)
     self._log.info("Loaded")
+    self.appdata = AppData
 
   def validate (self, rjson, types):
     return jsonValidate(rjson, types, self._log)
@@ -164,7 +169,91 @@ class GENIAPIv1(Dispatcher):
   @route('/geni/topology/list-attachments', methods=["GET"])
   def listAttachments (self):
     return jsonify(None)
+  
+  #Nick's code for handling VLANs (version 0.10 - MAINT)
+  '''
+  @route('/geni/approval/add-shared-vlan', methods=["POST"])
+  def addSharedVLAN (self):
+    if not request.json:
+      return
+    try:
+      objs = self.validate(request.json, [("vlan-id", (int))])
+      u = ConfigDB.getUser(request.environ["USER"])
+      self.appdata.addSharedVLAN(objs["vlan-id"], u)
+      return jsonify(None)
+    except JSONValidationError, e:
+      jd = e.__json__()
+      return jsonify(jd, code = 1, msg = jd["exception"])
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg  = traceback.format_exc())
 
+  @route('/geni/approval/remove-shared-vlan', methods=["POST"])
+  def removeSharedVLAN (self):
+    if not request.json:
+      return
+    try:
+      objs = self.validate(request.json, [("vlan-id", (int))])
+      u = ConfigDB.getUser(request.environ["USER"])
+      self.appdata.removeSharedVLAN(objs["vlan-id"], u)
+      return jsonify(None)
+    except JSONValidationError, e:
+      jd = e.__json__()
+      return jsonify(jd, code = 1, msg = jd["exception"])
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg  = traceback.format_exc())
+
+  @route('/geni/approval/list-shared-vlans', methods=["GET"])
+  def listSharedVLANs (self):
+    try:
+      u = ConfigDB.getUser(request.environ["USER"])
+      return jsonify(list(ConfigDB.getConfigItemByKey("geni.approval.shared-vlans").getValue(u)))
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg = traceback.format_exc())
+    
+  @route('/geni/approval/add-reserved-vlan', methods=["POST"])
+  def addReservedVLAN (self):
+    if not request.json:
+      return
+    try:
+      objs = self.validate(request.json, [("vlan-id", (int))])
+      u = ConfigDB.getUser(request.environ["USER"])
+      self.appdata.addAdminVLAN(objs["vlan-id"], u)
+      return jsonify(None)
+    except JSONValidationError, e:
+      jd = e.__json__()
+      return jsonify(jd, code = 1, msg = jd["exception"])
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg  = traceback.format_exc())
+
+  @route('/geni/approval/remove-reserved-vlan', methods=["POST"])
+  def removeReservedVLAN (self):
+    if not request.json:
+      return
+    try:
+      objs = self.validate(request.json, [("vlan-id", (int))])
+      u = ConfigDB.getUser(request.environ["USER"])
+      self.appdata.removeAdminVLAN(objs["vlan-id"], u)
+      return jsonify(None)
+    except JSONValidationError, e:
+      jd = e.__json__()
+      return jsonify(jd, code = 1, msg = jd["exception"])
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg  = traceback.format_exc())
+
+  @route('/geni/approval/list-reserved-vlans', methods=["GET"])
+  def listReservedVLANs (self):
+    try:
+      u = ConfigDB.getUser(request.environ["USER"])
+      return jsonify(list(ConfigDB.getConfigItemByKey("geni.approval.admin-vlans").getValue(u)))
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg = traceback.format_exc())
+  '''
 
 def setup (app):
   api = GENIAPIv1(app)

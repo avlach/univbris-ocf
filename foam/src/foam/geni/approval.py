@@ -4,6 +4,7 @@ import logging
 import uuid
 
 from foamext.IPy import IP
+from foamext import IPy
 from foam.geni.db import GeniDB
 from foam.core.exception import CoreException
 from foam.core.log import KeyAdapter
@@ -93,6 +94,22 @@ class VLANPresence(ApprovalFailure):
   def __str__ (self):
     return "Request has underspecified VLAN requests"
 
+'''
+class VLANConflictError(ApprovalFailure):
+  def __init__ (self, vid):
+    super(VLANConflictError, self).__init__()
+    self.vid = vid
+  def __str__ (self):
+    return "VLAN ID (%d) is already reserved by another sliver." % (self.vid)
+
+class ReservedVLANError(ApprovalFailure):
+  def __init__ (self, vid):
+    super(ReservedVLANError, self).__init__()
+    self.vid = vid
+  def __str__ (self):
+    return "VLAN ID (%d) is reserved by the administrator." % (self.vid)
+'''
+    
 class NoDatapaths(ApprovalFailure):
   def __init__ (self, fs):
     super(NoDatapaths, self).__init__()
@@ -164,6 +181,7 @@ class ApprovalData(object):
     self._loadSlivers(slivers)
     self._loadPortGroups()
     self._loadUserURNs()
+    #self._loadAdminVLANs()
 
   def _initCore (self):
     self._subnets = set()
@@ -171,7 +189,10 @@ class ApprovalData(object):
     self._ethertypes = set()
     self._portgroups = {}
     self._urns = set()
-
+    #self._vlans = set()
+    #self._admin_vlans = set()
+    #self._shared_vlans = set()
+    
   def _loadSlivers (self, slivers):
     for sliver in slivers:
       self.addSliver(sliver)
@@ -197,6 +218,16 @@ class ApprovalData(object):
     for urn in urns:
       self._urns.add(urn)
 
+  '''
+  def _loadAdminVLANs (self):
+    vlans = ConfigDB.getConfigItemByKey("geni.approval.admin-vlans").getValue()
+    if vlans is not None:
+      self._admin_vlans = vlans
+    vlans = ConfigDB.getConfigItemByKey("geni.approval.shared-vlans").getValue()
+    if vlans is not None:
+      self._shared_vlans = vlans    
+  '''
+  
   def createPortGroup (self, name, desc):
     pg = PortGroup()
     pg.name = name
@@ -224,12 +255,49 @@ class ApprovalData(object):
       user.assertPrivilege(item.getRWAttrs())
     self._urns.discard(urn)
     item.write(self._urns)
+    
+  '''
+  def addAdminVLAN (self, vlan, user = None):
+    item = ConfigDB.getConfigItemByKey("geni.approval.admin-vlans")
+    if user:
+      user.assertPrivilege(item.getRWAttrs())
+    self._admin_vlans.add(vlan)
+    item.write(self._admin_vlans)
+
+  def removeAdminVLAN (self, vlan, user = None):
+    item = ConfigDB.getConfigItemByKey("geni.approval.admin-vlans")
+    if user:
+      user.assertPrivilege(item.getRWAttrs())
+    self._admin_vlans.discard(vlan)
+    item.write(self._admin_vlans)
+
+  def addSharedVLAN (self, vlan, user = None):
+    item = ConfigDB.getConfigItemByKey("geni.approval.shared-vlans")
+    if user:
+      user.assertPrivilege(item.getRWAttrs())
+    self._shared_vlans.add(vlan)
+    item.write(self._shared_vlans)
+
+  def removeSharedVLAN (self, vlan, user = None):
+    item = ConfigDB.getConfigItemByKey("geni.approval.shared-vlans")
+    if user:
+      user.assertPrivilege(item.getRWAttrs())
+    self._shared_vlans.discard(vlan)
+    item.write(self._shared_vlans)
+  '''
 
   def approveUser (self, urn):
     if urn in self._urns:
       return True
     else:
       return False
+      
+  def parseSubnet (self, netstr):
+    (i,pl) = netstr.split("/")
+    net = IP(i)
+    nm = IP(IPy._prefixlenToNetmask(int(pl), 4))
+    net = net.make_net(nm)
+    return net
 
   def validateSliver (self, sliver):
     if not ConfigDB.getConfigItemByKey("geni.openflow.analysis-engine").getValue():
@@ -239,6 +307,28 @@ class ApprovalData(object):
     uncovered_fs = []
     for fs in fspecs:
       covered = False
+      subnet_covered = False
+      
+      # This must come first - if you request only VLANs which are not shared, you
+      # don't have to pass the rest of the rules checks (in the context of those VLANs)
+      '''
+      if ConfigDB.getConfigItemByKey("geni.approval.check-vlans").getValue():
+        vlan_covered = None
+        for vlan in fs.getVLANs():
+          if vlan in self._vlans:
+            raise VLANConflictError(vlan)
+          if vlan in self._admin_vlans:
+            raise ReservedVLANError(vlan)
+          if vlan in self._shared_vlans:
+            vlan_covered = False
+          elif vlan_covered is None:
+            vlan_covered = True
+        if vlan_covered:
+          continue
+      elif fs.hasVLANs():
+        raise VLANPresence(fs)
+      '''
+      
       for mac in fs.getMACs():
         covered = True
         if mac in self._macs:
@@ -253,7 +343,8 @@ class ApprovalData(object):
 
       for subnet in fs.getIPSubnets():
         covered = True
-        net = IP(subnet)
+        subnet_covered = True
+        net = self.parseSubnet(subnet)
         if net in self._subnets:
           raise IPSubnetConflict(net)
         for onet in self._subnets:
@@ -291,8 +382,15 @@ class ApprovalData(object):
         self._ethertypes.add(dltype)
 
       for subnet in fs.getIPSubnets():
-        net = IP(subnet)
+        if subnet is None:
+          self._log.info("Flowspec with None subnets: %s" % (sliver))
+          continue
+        net = self.parseSubnet(subnet)
+        #net = IP(subnet)
         self._subnets.add(net)
+       
+      #for vid in fs.getVLANs():
+      #  self._vlans.add(vid)
     
   def iterMACs (self):
     for x in self._macs: yield x
@@ -314,6 +412,14 @@ class IllegalUserURNValue(CoreException):
     self.val = newval
   def __str__ (self):
     return "Tried to set User URNs config to illegal value: %s" % (self.val)
+    
+'''
+class VLANStorageError(CoreException):
+  def __init__ (self, newval):
+    self.val = newval
+  def __str__ (self):
+    return "Tried to set admin VLANs config to illegal value: %s" % (self.val)
+'''
 
 def updatePortGroups (key, newval):
   if type(newval) is not dict:
