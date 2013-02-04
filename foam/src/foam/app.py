@@ -38,28 +38,32 @@ from foam.geni.db import GeniDB
 #request_tearing_down.connect(GeniDB.close, app)
 
 from foam.api import auth
-auth.setup(app)
+auth_apih = auth.setup(app) #Vasileios: get the returned apis
 
 from foam.api import gapi1
-gapi1.setup(app)
-
-from foam.api import gapi2
-gapi2.setup(app)
+gapi1_apih = gapi1.setup(app) #Vasileios: get the returned api handlers
 
 from foam.api import debug
-debug.setup(app)
+debug_apih = debug.setup(app) #Vasileios: get the returned api handlers
 
 from foam.api import auto
-auto.setup(app)
+auto_apih = auto.setup(app) #Vasileios: get the returned api handlers
 
 from foam.api import admin
-admin.setup(app)
+admin_apih = admin.setup(app) #Vasileios: get the returned api handlers
 
 from foam.api import geni
-geni.setup(app)
+geni_apih = geni.setup(app) #Vasileios: get the returned api handlers
 
-from foam.api import legacyexpedientapi
-legacyexpedientapi.setup(app)
+#here check maybe ofelia-geni api collaboration
+
+#modified by Vasileios, load afterwards
+from foam.api import gapi2
+gapi2_apih = gapi2.setup(app) #Vasileios: get the returned api handlers
+
+#modified by Vasileios, load afterwards
+from foam.api import legacyexpedientapi #Vasileios: get the returned api handlers
+legacyexpedientapi_apih = legacyexpedientapi.setup(app) #Vasileios: get the returned api handlers
 
 ConfigDB.commit()
 GeniDB.commit()
