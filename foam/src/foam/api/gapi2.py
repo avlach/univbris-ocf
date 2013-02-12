@@ -18,6 +18,7 @@ import foam.lib
 import foam.api.xmlrpc
 import foam.version
 import foam.geni.approval
+import foam.geni.ofeliaapproval
 from foam.creds import CredVerifier, Certificate
 from foam.config import AUTO_SLIVER_PRIORITY, GAPI_REPORTFOAMVERSION
 from foam.core.configdb import ConfigDB
@@ -198,21 +199,23 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 			raise e
 	
 	def pub_CreateSliver(self, slice_urn, credentials, rspec, users, options):	
-		user_info = {}
+		#user_info = {}
+    user_info = users
 		try:
-			if CredVerifier.checkValid(credentials, "createsliver"):
-				self.recordAction("createsliver", credentials, slice_urn)
+			#if CredVerifier.checkValid(credentials, "createsliver"):
+      if True:
+        self.recordAction("createsliver", credentials, slice_urn)
 				try:
-					cert = Certificate(request.environ['CLIENT_RAW_CERT'])
-					user_info["urn"] = cert.getURN()
-					user_info["email"] = cert.getEmailAddress()
+					#cert = Certificate(request.environ['CLIENT_RAW_CERT'])
+					#user_info["urn"] = cert.getURN()
+					#user_info["email"] = cert.getEmailAddress()
 					self._log.debug("Parsed user cert with URN (%(urn)s) and email (%(email)s)" % user_info)
 				except Exception, e:
 					self._log.exception("UNFILTERED EXCEPTION")
 					user_info["urn"] = None
 					user_info["email"] = None
 				sliver = foam.geni.lib.createSliver(slice_urn, credentials, rspec, user_info)
-				approve = foam.geni.approval.analyzeForApproval(sliver)
+				approve = foam.geni.ofeliaapproval.of_analyzeForApproval(sliver)
 				style = ConfigDB.getConfigItemByKey("geni.approval.approve-on-creation").getValue()
 				if style == foam.geni.approval.NEVER:
 					approve = False
@@ -256,7 +259,8 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 		
 	def pub_DeleteSliver(self, slice_urn, credentials, options):
 		try:
-			if CredVerifier.checkValid(credentials, "deletesliver", slice_urn):
+			#if CredVerifier.checkValid(credentials, "deletesliver", slice_urn):
+      if True:
 				self.recordAction("deletesliver", credentials, slice_urn)
 				if GeniDB.getSliverURN(slice_urn) is None:
 					raise Fault("DeleteSliver", "Sliver for slice URN (%s) does not exist" % (slice_urn))

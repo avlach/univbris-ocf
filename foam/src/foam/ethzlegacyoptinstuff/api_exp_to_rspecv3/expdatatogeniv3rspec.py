@@ -67,10 +67,10 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 	ofcontrollers[0].set("url", controller_url)
 	ofcontrollers[0].set("type", "primary")
 	#monitor controller
-	ofcontrollers[1].set("url", "tcp:monitor.example.net:6634")
+	ofcontrollers[1].set("url", "tcp:monitor.example.foam.ocf.fp7-ofelia.eu:6634")
 	ofcontrollers[1].set("type", "monitor")
 	#backup controller
-	ofcontrollers[2].set("url", "tcp:backup.example.net:6633")
+	ofcontrollers[2].set("url", "tcp:backup.example.foam.ocf.fp7-ofelia.eu:6633")
 	ofcontrollers[2].set("type", "backup")	
 	
 	#add sliver group to rspec
@@ -98,9 +98,11 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 	j=0
 	for dpid in dpids:
 		ofgroupdatapaths.append(etree.SubElement(ofgroup, "{"+openflow+"}datapath"))
-		ofgroupatapaths[i].set("component_id", "urn:publicid:IDN+openflow:foam:foam.example.net+datapath+"+str(dpid))
-		ofgroupdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:foam:foam.example.net+authority+am")
-		for dpp in ofdpports[dpid]: 
+		#ofgroupatapaths[i].set("component_id", "urn:publicid:IDN+openflow:foam:foam.example.net+datapath+"+str(dpid))
+		#ofgroupdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:foam:foam.example.net+authority+am")
+		ofgroupatapaths[i].set("component_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+datapath+"+str(dpid))
+    ofgroupdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+authority+am")
+    for dpp in ofdpports[dpid]: 
 			ofgroupdpports.append(etree.SubElement(ofgroupdatapaths[i], "{"+openflow+"}port"))
 			ofgroupdpports[j].set("num", dpp) #we will see about the name attribute
 			j = j + 1
@@ -119,8 +121,10 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 		ofmatch.append(etree.SubElement(ofsliver, "{"+openflow+"}match"))
 		#match datapath + ports
 		ofmatchdatapaths.append(etree.SubElement(ofmatch[i], "{"+openflow+"}datapath"))
-		ofmatchdatapaths[i].set("component_id", "urn:publicid:IDN+openflow:foam:foam.example.net+datapath+"+str(experimentflowspace.dpid))
-		ofmatchdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:foam:foam.example.net+authority+am")
+		#ofmatchdatapaths[i].set("component_id", "urn:publicid:IDN+openflow:foam:foam.example.net+datapath+"+str(experimentflowspace.dpid))
+		#ofmatchdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:foam:foam.example.net+authority+am")
+    ofmatchdatapaths[i].set("component_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+datapath+"+str(experimentflowspace.dpid))
+    ofmatchdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+authority+am")
 		ofmatchdatapaths[i].set("dpid", str(experimentflowspace.dpid))
 		for port_number in range(experimentflowspace.port_number_s, experimentflowspace.port_number_e):
 			ofmatchdpports.append(etree.SubElement(ofmatchdatapaths[i], "{"+openflow+"}port"))

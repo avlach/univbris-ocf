@@ -38,7 +38,7 @@ from foam.core.log import KeyAdapter
 
 #GENI API imports
 from foam.geni.db import GeniDB, UnknownSlice, UnknownNode
-import foam.geni.approval
+import foam.geni.ofeliaapproval
 import foam.geni.lib
 import sfa
 
@@ -47,8 +47,10 @@ from foam.flowvisor import Connection as FV
 
 #my imports
 from foam.app import admin_apih #admin is setup beforehand so handler is perfect for handling slices
-from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import create_ofv3_rspec,\
-    extract_IP_mask_from_IP_range
+#from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import create_ofv3_rspec,\
+#    extract_IP_mask_from_IP_range
+from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import *
+from foam.app import gapi2_apih #use gapi2 handler
 
 
 class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
@@ -159,7 +161,7 @@ def get_direction(direction):
     return 2
   return 2
 
-#to be coded-----------------------------------------------------------------------
+#coded from scratch, to be checked
 @check_user
 @check_fv_set
 @rpcmethod(signature=['struct', # return value
@@ -266,13 +268,142 @@ def create_slice(slice_id, project_name, project_description,
   print "    switch_slivers"
   pprint(switch_slivers, indent=8)
   
+  #legacy experiment creation (old database access)
+  e = Experiment.objects.filter(slice_id=slice_id)
+  if (e.count()>0):
+    old_e = e[0]
+    old_fv_name = old_e.get_fv_slice_name()
+    update_exp = True
+    old_exp_fs = ExperimentFLowSpace.objects.filter(exp=old_e)
+  else:
+    update_exp = False    
+  e = Experiment()
+  e.slice_id = slice_id
+  e.project_name = project_name
+  e.project_desc = project_description
+  e.slice_name = slice_name
+  e.slice_desc = slice_description
+  e.controller_url = controller_url
+  e.owner_email = owner_email
+  e.owner_password = owner_password
+  e.save()
   
-
-#to be coded-----------------------------------------------------------------------
+  #legacy create slice flowspaces
+  all_efs = [] 
+  for sliver in switch_slivers:
+    if "datapath_id" in sliver:
+      dpid = sliver['datapath_id']
+    else:
+      dpid = "00:" * 8
+      dpid = dpid[:-1]
+        
+    if len(sliver['flowspace'])==0:
+      efs = ExperimentFLowSpace()
+      efs.exp  = e
+      efs.dpid = dpid
+      efs.direction = 2
+      all_efs.append(efs)
+    else:
+      for sfs in sliver['flowspace']:
+          efs = ExperimentFLowSpace()
+          efs.exp  = e
+          efs.dpid = dpid
+          if "direction" in sfs:
+              efs.direction = get_direction(sfs['direction'])
+          else:
+              efs.direction = 2       
+          fs = convert_star(sfs)
+          for attr_name,(to_str, from_str, width, om_name, of_name) in \
+          om_ch_translate.attr_funcs.items():
+              ch_start ="%s_start"%(attr_name)
+              ch_end ="%s_end"%(attr_name)
+              om_start ="%s_s"%(om_name)
+              om_end ="%s_e"%(om_name)
+              setattr(efs,om_start,from_str(fs[ch_start]))
+              setattr(efs,om_end,from_str(fs[ch_end]))
+          all_efs.append(efs)
+  
+  #set the necessary parameters so that we can use FOAM internal functions for sliver creation
+  #Vasileios: now that the requested flowspaces are identified, create the rspec (to be used in FOAM)
+  slice_of_rspec = create_ofv3_rspec(slice_id, project_name, project_description, \
+                                    slice_name, slice_description, controller_url, \
+                                    owner_email, owner_password, \
+                                    switch_slivers, all_efs)
+  #form the slice URN according to http://groups.geni.net/geni/wiki/GeniApiIdentifiers
+  slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
+  
+  creds = [] #creds are not needed at least for now: to be fixed
+  user_info = {}
+  user_info["urn"] = "urn:publicid:IDN+" + "openflow:fp7-ofelia.eu:ocf:ch+" + "user+" + str(owner_email) #temp hack
+  user_info["email"] = str(owner_email)
+  
+  #now we have: slice_urn, creds, rspec and user_info : great!
+  
+  #moving on (now use gapi2 calls)
+  if (update_exp):
+    try:
+      old_exp_fs.delete()
+      old_e.delete()
+      old_exp_shutdown_success = gapi2_apih.pub_Shutdown(slice_urn, creds, [])
+    except Exception, e:
+      import traceback
+      traceback.print_exc()
+      raise Exception("Exception while trying to shutdown old slice!")
+    if old_exp_shutdown_success == False:
+      raise Exception("Old slice could not be shutdown")
+      
+  #create new slice
+  created_slice_info = gapi2_apih.createSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
+  #legacy save flowspace
+  for fs in all_efs:
+    fs.save()     
+  print "Created slice with %s %s %s %s" % (
+        e.get_fv_slice_name(), owner_password, controller_url, owner_email)
+  transaction.commit()
+  
+  return {
+        'error_msg': "",
+        'switches': [],
+    } 
+    
+#coded from scratch, to be checked
 @check_user
 @check_fv_set
 @rpcmethod(signature=['string', 'int'])
 def delete_slice(sliceid, **kwargs):
+  '''
+  Delete the slice with id sliceid.
+  
+  @param slice_id: an int that uniquely identifies the slice at the 
+      Clearinghouseclearinghouse.
+  @type sliceid: int
+  @param kwargs: will contain additional useful information about the request.
+      Of most use are the items in the C{kwargs['request'].META} dict. These
+      include 'REMOTE_USER' which is the username of the user connecting or
+      if using x509 certs then the domain name.
+  @return error message if there are any errors or "" otherwise.
+  '''
+  
+  #legacy deletion (just for compatibility)
+  try:
+    single_exp = Experiment.objects.get(slice_id = sliceid)
+  except Experiment.DoesNotExist:
+    return "Experiment Doesnot Exist"
+  ofs = OptsFlowSpace.objects.filter(opt__experiment = single_exp)
+  for fs in ofs:
+    MatchStruct.objects.filter(optfs = fs).delete()
+    # delete all flowspaces opted into this exp : not sure if this is still needed
+    ofs.delete()
+    UserOpts.objects.filter(experiment = single_exp).delete()
+    ExperimentFLowSpace.objects.filter(exp = single_exp).delete()
+    single_exp.delete()
+  
+  #FOAM deletion
+  slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
+  creds = []
+  deleted_slice_info = gapi2_apih.pub_DeleteSliver(slice_urn, creds, []):
+  
+  return ""
 
 #modified, to be checked
 @check_user
@@ -351,13 +482,83 @@ def change_password(new_password, **kwargs):
 def ping(data, **kwargs):
   try:
     FV.log.debug("XMLRPC:ping (%s)" % ())
-    return FV.xmlcall("ping" + " " + 
+    return FV.xmlcall("ping" + " " + str(data)) #this will return a PONG is everything alright
+  except Exception, e:
+    import traceback
+    traceback.print_exc()
+    raise e
 
-#to be coded-----------------------------------------------------------------------      
+#as is, checked    
 @check_user
 @check_fv_set
 @rpcmethod()
 def get_granted_flowspace(slice_id, **kwargs):
+  '''
+  Return FlowVisor Rules for the slice.
+  '''
+  def parse_granted_flowspaces(gfs):
+    gfs_list=[] 
+    for fs in gfs:
+        fs_dict = dict(
+            flowspace=dict(),
+            openflow=dict()
+        )
+        fs_dict['openflow']=[]
+        fs_dict['flowspace']=dict(
+                                 mac_src_s=int_to_mac(fs.mac_src_s),
+                                 mac_src_e=int_to_mac(fs.mac_src_e),
+                                 mac_dst_s=int_to_mac(fs.mac_dst_s),
+                                 mac_dst_e=int_to_mac(fs.mac_dst_e),
+                                 eth_type_s=fs.eth_type_s,
+                                 eth_type_e=fs.eth_type_e,
+                                 vlan_id_s=fs.vlan_id_s,
+                                 vlan_id_e=fs.vlan_id_e,
+                                 ip_src_s=int_to_dotted_ip(fs.ip_src_s),
+                                 ip_dst_s=int_to_dotted_ip(fs.ip_dst_s),
+                                 ip_src_e=int_to_dotted_ip(fs.ip_src_e),
+                                 ip_dst_e=int_to_dotted_ip(fs.ip_dst_e),
+                                 ip_proto_s=fs.ip_proto_s,
+                                 ip_proto_e=fs.ip_proto_e,
+                                 tp_src_s=fs.tp_src_s,
+                                 tp_dst_s=fs.tp_dst_s,
+                                 tp_src_e=fs.tp_src_e,
+                                 tp_dst_e=fs.tp_dst_e,
+                             )
+        openflow_dict=dict(
+                                dpid=fs.dpid, 
+                                direction=fs.direction, 
+                                port_number_s=fs.port_number_s, 
+                                port_number_e=fs.port_number_e, 
+                           )
+        existing_fs = False
+        for prev_dict in gfs_list:
+            if fs_dict['flowspace'] == prev_dict['flowspace']:
+                prev_dict['openflow'].append(openflow_dict)
+                existing_fs = True
+                break
+        if not existing_fs:
+            fs_dict['openflow'].append(openflow_dict) 
+            gfs_list.append(fs_dict)
+    
+    return gfs_list
+    
+  try:
+      exp = Experiment.objects.filter(slice_id = slice_id)
+      if exp and len(exp) == 1:
+          opts = exp[0].useropts_set.all()
+          if opts:
+              gfs = opts[0].optsflowspace_set.all()
+              gfs = parse_granted_flowspaces(gfs)
+          else:
+              gfs = []
+      else:
+          gfs = []			
+  except Exception,e:
+      import traceback
+      traceback.print_exc()
+      raise Exception(parseFVexception(e))
+
+  return gfs 
 
 #modified, to be checked
 #@check_user
@@ -366,7 +567,7 @@ def get_granted_flowspace(slice_id, **kwargs):
 def get_offered_vlans(set=None):
   return admin.adminOfferVlanTags(set, False)
 
-#setup our legacy API  
+#setup legacy API  
 def setup (app):
   legexpapi = XMLRPCHandler('legacyexpedientapi')
   legexpapi.connect(app, '/foam/legacyexpedientapi')
