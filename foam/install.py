@@ -33,8 +33,10 @@ def copyfile (src, dst):
   shutil.copyfile(src, dst)
 
 def fixup_version (opts):
-  rev = call('hg id -i').strip()
-  branch = call('hg id -b').strip()
+  #rev = call('hg id -i').strip()
+  #branch = call('hg id -b').strip()
+  rev = 'to_be_tagged'
+  branch = call('echo $(git branch | grep "*" | sed "s/* //")').strip()
 
   f = open("setup.py", "r")
   new_setup = []
@@ -84,7 +86,7 @@ def postinst (opts):
   symlink("/etc/nginx/sites-available/foam.conf", "/etc/nginx/sites-enabled/foam.conf")
   copyfile("%s/debian/init.d" % (os.getcwd()), "/etc/init.d/foam")
   # Maybe ask if you really want to revert setup.py right now?
-  call("hg revert setup.py src/foam/version.py --no-backup")
+  #call("hg revert setup.py src/foam/version.py --no-backup")
 
 def parse_args (argv):
   parser = OptionParser()
@@ -99,11 +101,11 @@ def main ():
 
   opts = parse_args(sys.argv)
   if not opts.allow_uncommitted:
-    if call("hg status", False, False).strip():
+    if call("git status", False, False).strip():
       print "You must commit all changes before running this installer."
       sys.exit(1)
 
-  fixup_version(opts)
+  #fixup_version(opts)
   install_foam()
   install_deps()
   postinst(opts)

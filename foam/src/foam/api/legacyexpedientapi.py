@@ -453,6 +453,11 @@ def get_links(**kwargs):
 @check_user
 @rpcmethod(signature=['string', 'string', 'string'])
 def register_topology_callback(url, cookie, **kwargs):
+#next step: see how this &*^&*$#@ information can be propagated to Expedient directly
+#we need the topology to be automatically updated (not only manually)
+
+
+
   
 #as is, probably needs changes because of DB refs  
 @check_user

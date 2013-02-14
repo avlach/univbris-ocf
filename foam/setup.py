@@ -68,9 +68,9 @@ def main ():
 #  pprint.pprint(data_files)
 
   setup(name='foam',
-      version='0.8.2',
+      version='foam_0.8.2|ofelia_0.1',
         description='Flowvisor Openflow Aggregate Manager',
-        author='Nick Bastin',
+        author='Nick Bastin and Vasileios Kotronis',
         author_email='nick.bastin@gmail.com',
         url='https://openflow.stanford.edu/display/FOAM/Home',
         packages=[],
