@@ -19,6 +19,8 @@ NAME=foam
 DESC=FOAM
 PIDFILE=/var/run/$NAME.pid
 
+#Make the package executable or if not there exit
+chmod +x $DAEMON || exit 1
 # Exit if the package is not installed
 [ -x $DAEMON ] || exit 1
 

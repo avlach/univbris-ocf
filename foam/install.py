@@ -85,12 +85,15 @@ def postinst (opts):
   call("/usr/sbin/make-ssl-cert generate-default-snakeoil")
   symlink("/etc/nginx/sites-available/foam.conf", "/etc/nginx/sites-enabled/foam.conf")
   copyfile("%s/debian/init.d" % (os.getcwd()), "/etc/init.d/foam")
+  #making /etc/init.d/foam executable  
+  call("chmod +x /etc/init.d/foam")
   # Maybe ask if you really want to revert setup.py right now?
   #call("hg revert setup.py src/foam/version.py --no-backup")
 
 def parse_args (argv):
   parser = OptionParser()
-  parser.add_option("--allow-uncommitted", dest="allow_uncommitted", default=False, action="store_true")
+  #parser.add_option("--allow-uncommitted", dest="allow_uncommitted", default=False, action="store_true")
+  parser.add_option("--allow-uncommitted", dest="allow_uncommitted", default=True, action="store_true")
   (opts, args) = parser.parse_args()
   return opts
 
