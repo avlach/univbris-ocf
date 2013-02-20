@@ -63,7 +63,8 @@ def main ():
   data_files.extend(generatePluginFiles())
   data_files.extend(generateDataFiles('src/foamext/', "*.py", newroot='/opt/foam/lib/foamext'))
   data_files.extend(generateDataFiles('src/ext/', "*.py", newroot='/opt/foam/lib'))
-  data_files.extend(generateDataFiles('src/foam/', "*.py", newroot='/opt/foam/lib/foam'))
+  #data_files.extend(generateDataFiles('src/foam/', "*.py", newroot='/opt/foam/lib/foam'))
+  data_files.extend(generateDataFiles('src/foam/', "*.*", newroot='/opt/foam/lib/foam'))
   data_files.extend(generateDataFiles('templates/', "*.txt", newroot='/opt/foam/etc/templates/default'))
 #  pprint.pprint(data_files)
 
