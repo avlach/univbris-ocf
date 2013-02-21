@@ -4,9 +4,9 @@
 #import the etree module
 from lxml import etree
 #import om_ch_translate class from the api to use for the fs field names
-from expedientapi import om_ch_translate
+from foam.api.legacyexpedientapi import om_ch_translate
 #import some utility functions from flowspaceutils of the legacy optin manager
-from foam.legacyoptin.flowspaceutils import dotted_ip_to_int, mac_to_int, int_to_dotted_ip, int_to_mac
+from foam.ethzlegacyoptinstuff.legacyoptin.flowspaceutils import dotted_ip_to_int, mac_to_int, int_to_dotted_ip, int_to_mac
 
 #needed for the auxiliray function extract_IP_mask_from_IP_range
 import operator
@@ -101,8 +101,8 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 		#ofgroupatapaths[i].set("component_id", "urn:publicid:IDN+openflow:foam:foam.example.net+datapath+"+str(dpid))
 		#ofgroupdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:foam:foam.example.net+authority+am")
 		ofgroupatapaths[i].set("component_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+datapath+"+str(dpid))
-    ofgroupdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+authority+am")
-    for dpp in ofdpports[dpid]: 
+		ofgroupdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+authority+am")
+		for dpp in ofdpports[dpid]: 
 			ofgroupdpports.append(etree.SubElement(ofgroupdatapaths[i], "{"+openflow+"}port"))
 			ofgroupdpports[j].set("num", dpp) #we will see about the name attribute
 			j = j + 1
@@ -123,8 +123,8 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 		ofmatchdatapaths.append(etree.SubElement(ofmatch[i], "{"+openflow+"}datapath"))
 		#ofmatchdatapaths[i].set("component_id", "urn:publicid:IDN+openflow:foam:foam.example.net+datapath+"+str(experimentflowspace.dpid))
 		#ofmatchdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:foam:foam.example.net+authority+am")
-    ofmatchdatapaths[i].set("component_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+datapath+"+str(experimentflowspace.dpid))
-    ofmatchdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+authority+am")
+		ofmatchdatapaths[i].set("component_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+datapath+"+str(experimentflowspace.dpid))
+		ofmatchdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+authority+am")
 		ofmatchdatapaths[i].set("dpid", str(experimentflowspace.dpid))
 		for port_number in range(experimentflowspace.port_number_s, experimentflowspace.port_number_e):
 			ofmatchdpports.append(etree.SubElement(ofmatchdatapaths[i], "{"+openflow+"}port"))

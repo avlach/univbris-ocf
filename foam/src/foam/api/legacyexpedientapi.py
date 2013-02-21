@@ -51,9 +51,11 @@ from foam.flowvisor import Connection as FV
 from foam.app import admin_apih #admin is setup beforehand so handler is perfect for handling slices
 #from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import create_ofv3_rspec,\
 #    extract_IP_mask_from_IP_range
-from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import *
 from foam.app import gapi2_apih #use gapi2 handler
 from pprint import pprint
+
+def _same(val):
+	return "%s" % val 
 
 #legacy class as is
 class om_ch_translate(object): 
@@ -71,6 +73,7 @@ class om_ch_translate(object):
     "port_num": (_same, int, 16, "port_number","in_port"),
     }
 
+from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import *
 
 class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   def __init__ (self, log):
@@ -109,9 +112,6 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
         raise Exception("Remote user %s is not a clearinghouse user" % (this_user.username))
     '''     
     return func(*args, **kwargs)
-
-  def _same(val):
-    return "%s" % val  
 
   #modified, checked
   #@check_user
