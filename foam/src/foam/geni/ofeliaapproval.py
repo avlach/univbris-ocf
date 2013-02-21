@@ -16,10 +16,9 @@ from foam.geni.approval import UnknownApprovalMode, ApprovalFailure, \
 															 NoDatapaths, PortAlyzer, PortGroup, 	 \
 															 IllegalPortGroupValue, IllegalUserURNValue, \
 															 updatePortGroups, updateUserURNs, setMode
-from foam.flowclashdetection.mechanism import MACIValTree, ETherTypeIValTree, \
-																							VLANIValTree, IPSubnetIValTree, \
-																							NWProtoIValTree, TPPortIValTree
-from foam.ethzlegacyoptinstuff.flowspaceutils import int_to_dotted_ip, dotted_ip_to_int, \
+from foam.flowclashdetection.flowfieldtrees import MACIValTree, VLANIValTree, \
+																									 IPSubnetIValTree, TPPortIValTree
+from foam.ethzlegacyoptinstuff.legacyoptin.flowspaceutils import int_to_dotted_ip, dotted_ip_to_int, \
 																										 mac_to_int, int_to_mac
 
 NEVER = 0
@@ -418,9 +417,9 @@ class of_ApprovalData(object):
 				
 				#add dltypes old style
 				for dltype in fs.getEtherTypes():
-				if dltype == "0x806" or dltype == "0x800":
-					continue
-				self._ethertypes.add(dltype)
+					if ((dltype == "0x806") or (dltype == "0x800")):
+						continue
+					self._ethertypes.add(dltype)
 				
 				#add vlans old style
 				for vlanid in fs.getVLANs():
@@ -482,22 +481,28 @@ class of_ApprovalData(object):
 					previnttpport = inttpport
 				
 	def iterMACs (self):
-    for x in self._macs: yield x
+		for x in self._macs: 
+			yield x
 
-  def iterEthertypes (self):
-    for x in self._ethertypes: yield x
+	def iterEthertypes (self):
+		for x in self._ethertypes: 
+			yield x
 	
 	def iterVLANs (self):
-		for x in self._vlans yield x
+		for x in self._vlans: 
+			yield x
 		
-  def iterSubnets (self):
-    for x in self._subnets: yield x
+	def iterSubnets (self):
+		for x in self._subnets: 
+			yield x
 		
 	def iterNWProtos (self):
-		for x in self._nwprotos yield x
+		for x in self._nwprotos: 
+			yield x
 	
 	def iterTPPorts (self):
-		for x in self._tpports yield x
+		for x in self._tpports:
+			yield x
 		
 
 from foam.core.configdb import ConfigDB

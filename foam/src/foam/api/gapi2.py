@@ -83,7 +83,7 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 									'namespace': 'http://www.geni.net/resources/rspec/3',
 									'extensions': [ 'http://www.geni.net/resources/rspec/ext/openflow/3' ]}
 						],
-				}
+				},
 				"output" : ""
 				}
 		#legacy from foam, not sure if I can accumulate it correctly in return d, depends
@@ -145,7 +145,7 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 			#with the one supported by our foam AM
 			if type != 'geni':
 				#self._log.error("ListResources: Unknown RSpec type %s requested", type)
-        addEx = AdditionalException("BADVERSION")
+				addEx = AdditionalException("BADVERSION")
 				addEx.code = 4
 				addEx.desc = "Bad Version: requested RSpec type %s is not a valid option." % type
 				raise addEx    
@@ -200,11 +200,11 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 	
 	def pub_CreateSliver(self, slice_urn, credentials, rspec, users, options):	
 		#user_info = {}
-    user_info = users
+		user_info = users
 		try:
 			#if CredVerifier.checkValid(credentials, "createsliver"):
-      if True:
-        self.recordAction("createsliver", credentials, slice_urn)
+			if True:
+				self.recordAction("createsliver", credentials, slice_urn)
 				try:
 					#cert = Certificate(request.environ['CLIENT_RAW_CERT'])
 					#user_info["urn"] = cert.getURN()
@@ -260,7 +260,7 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 	def pub_DeleteSliver(self, slice_urn, credentials, options):
 		try:
 			#if CredVerifier.checkValid(credentials, "deletesliver", slice_urn):
-      if True:
+			if True:
 				self.recordAction("deletesliver", credentials, slice_urn)
 				if GeniDB.getSliverURN(slice_urn) is None:
 					raise Fault("DeleteSliver", "Sliver for slice URN (%s) does not exist" % (slice_urn))
@@ -337,18 +337,21 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 		try:
 			if CredVerifier.checkValid(credentials, "shutdown", slice_urn):
 				self.recordAction("shutdown", credentials, slice_urn)
-					if GeniDB.getSliverURN(slice_urn) is None:
-						raise Fault("ShutdownSliver", "Sliver for slice URN (%s) does not exist" % (slice_urn))
-						return self.errorResult(12, "") #not sure if this is needed
-					sliver_urn = GeniDB.getSliverURN(slice_urn)
-					data = GeniDB.getSliverData(sliver_urn, True)
-					foam.geni.lib.deleteSliver(sliver_urn = sliver_urn)
-					#foam.task.emailGAPIDeleteSliver(data)
-					#foam.lib.shutdown(slice_urn) #but this medthod is not within foam.lib!!! 
-					#Where is shutdown located then??? Help needed :)
-					#probably need to implement it from scratch or just use deletesliver
+				if GeniDB.getSliverURN(slice_urn) is None:
+					raise Fault("ShutdownSliver", "Sliver for slice URN (%s) does not exist" % (slice_urn))
+					return self.errorResult(12, "") #not sure if this is needed
+				sliver_urn = GeniDB.getSliverURN(slice_urn)
+				data = GeniDB.getSliverData(sliver_urn, True)
+				foam.geni.lib.deleteSliver(sliver_urn = sliver_urn)
+				#foam.task.emailGAPIDeleteSliver(data)
+				#foam.lib.shutdown(slice_urn) #but this medthod is not within foam.lib!!! 
+				#Where is shutdown located then??? Help needed :)
+				#probably need to implement it from scratch or just use deletesliver
 				return self.successResult(True)
 			return self.successResult(True)
+		except Exception, e:
+			self._log.exception("Exception")
+			raise e
 		
 	#additional methods from OMNI ref AM impl., to return results with proper codes and values
 	#we will see how we will use them
