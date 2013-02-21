@@ -1,3 +1,5 @@
+#obsolete (don't import!)
+
 from django.db import models
 from expedient.common.xmlrpc_serverproxy.models import PasswordXMLRPCServerProxy
 import httplib,urllib,base64

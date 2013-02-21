@@ -14,12 +14,11 @@ from django.contrib.sites.models import Site
 '''
 
 #legacy optin imports
-from foam.ethzlegacyoptinstuff.legacyoptin.xmlrpcmodels import CallBackServerProxy, FVServerProxy
-from foam.ethzlegacyoptinstuff.legacyoptin.optsmodels import Experiment, ExperimentFLowSpace,\
-    UserOpts, OptsFlowSpace, MatchStruct
+#from foam.ethzlegacyoptinstuff.legacyoptin.xmlrpcmodels import CallBackServerProxy, FVServerProxy
+from foam.ethzlegacyoptinstuff.legacyoptin.optsmodels import Experiment, ExperimentFLowSpace #,\
+    #UserOpts, OptsFlowSpace, MatchStruct
 from foam.ethzlegacyoptinstuff.legacyoptin.flowspaceutils import dotted_ip_to_int, mac_to_int,\
     int_to_dotted_ip, int_to_mac, parseFVexception
-from foam.ethzlegacyoptinstuff.legacyoptin.flowspaceutils import int_to_mac, int_to_dotted_ip
 
 #foam general imports
 import logging
@@ -119,10 +118,10 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@rpcmethod()
   def checkFlowVisor( *arg, **kwargs):
     if (FV.xmlconn is None):
-		  raise Exception("No xlmlrpc connection with Flowvisor detected")
-	  if (FV.jsonconn is None):
-		  raise Exception("No jsonrpc connection with FlowVisor detected")
-	  return ""
+      raise Exception("No xlmlrpc connection with Flowvisor detected")
+    if (FV.jsonconn is None):
+      raise Exception("No jsonrpc connection with FlowVisor detected")
+    return ""
 
   #as is
   def convert_star(fs):
@@ -281,6 +280,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     else:
       update_exp = False  
     '''  
+  
     e = Experiment()
     e.slice_id = slice_id
     e.project_name = project_name
@@ -291,6 +291,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     e.owner_email = owner_email
     e.owner_password = owner_password
     #e.save()
+
     
     #legacy create slice flowspaces
     all_efs = [] 
@@ -409,7 +410,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     #FOAM deletion
     slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
     creds = []
-    deleted_slice_info = gapi2_apih.pub_DeleteSliver(slice_urn, creds, []):
+    deleted_slice_info = gapi2_apih.pub_DeleteSliver(slice_urn, creds, [])
     
     return ""
 

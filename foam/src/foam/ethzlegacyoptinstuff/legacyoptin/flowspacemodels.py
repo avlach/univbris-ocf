@@ -1,25 +1,25 @@
-from django.db import models
+#from django.db import models
 from foam.ethzlegacyoptinstuff.legacyoptin.flowspaceutils import int_to_mac, int_to_dotted_ip
 
-class FlowSpace(models.Model):
-    mac_src_s           = models.BigIntegerField("Start Source MAC address", null=True, default=0x000000000000)
-    mac_src_e           = models.BigIntegerField("End Source MAC address", null=True, default=0xFFFFFFFFFFFF)
-    mac_dst_s           = models.BigIntegerField("Start Destination MAC address" , null=True, default=0x000000000000)
-    mac_dst_e           = models.BigIntegerField("End Destination MAC address" , null=True, default=0xFFFFFFFFFFFF)
-    eth_type_s          = models.IntegerField("Start Ethernet Type" , null=True, default=0x0000)
-    eth_type_e          = models.IntegerField("End Ethernet Type" , null=True, default=0xFFFF)
-    vlan_id_s           = models.IntegerField("Start Vlan ID" , null=True, default=0x000)
-    vlan_id_e           = models.IntegerField("End Vlan ID" , null=True, default=0xFFF)
-    ip_src_s            = models.BigIntegerField("Start Source IP Address" , null=True, default=0x00000000)
-    ip_src_e            = models.BigIntegerField("End Source IP Address" , null=True, default=0xFFFFFFFF)
-    ip_dst_s            = models.BigIntegerField("Start Destination IP Address" , null=True, default=0x00000000)
-    ip_dst_e            = models.BigIntegerField("End Destination IP Address" , null=True, default=0xFFFFFFFF)
-    ip_proto_s          = models.IntegerField("Start IP Protocol Number" , null=True, default=0x00)
-    ip_proto_e          = models.IntegerField("End IP Protocol Number" , null=True, default=0xFF)
-    tp_src_s            = models.IntegerField("Start Source Transport Port" , null=True, default=0x0000)
-    tp_src_e            = models.IntegerField("End Source Transport Port" , null=True, default=0xFFFF)
-    tp_dst_s            = models.IntegerField("Start Destination Transport Port" , null=True, default=0x0000)
-    tp_dst_e            = models.IntegerField("End Destination Transport Port" , null=True, default=0xFFFF)
+class FlowSpace(object): #(models.Model):
+    mac_src_s           = None #models.BigIntegerField("Start Source MAC address", null=True, default=0x000000000000)
+    mac_src_e           = None #models.BigIntegerField("End Source MAC address", null=True, default=0xFFFFFFFFFFFF)
+    mac_dst_s           = None #models.BigIntegerField("Start Destination MAC address" , null=True, default=0x000000000000)
+    mac_dst_e           = None #models.BigIntegerField("End Destination MAC address" , null=True, default=0xFFFFFFFFFFFF)
+    eth_type_s          = None #models.IntegerField("Start Ethernet Type" , null=True, default=0x0000)
+    eth_type_e          = None #models.IntegerField("End Ethernet Type" , null=True, default=0xFFFF)
+    vlan_id_s           = None #models.IntegerField("Start Vlan ID" , null=True, default=0x000)
+    vlan_id_e           = None #models.IntegerField("End Vlan ID" , null=True, default=0xFFF)
+    ip_src_s            = None #models.BigIntegerField("Start Source IP Address" , null=True, default=0x00000000)
+    ip_src_e            = None #models.BigIntegerField("End Source IP Address" , null=True, default=0xFFFFFFFF)
+    ip_dst_s            = None #models.BigIntegerField("Start Destination IP Address" , null=True, default=0x00000000)
+    ip_dst_e            = None #models.BigIntegerField("End Destination IP Address" , null=True, default=0xFFFFFFFF)
+    ip_proto_s          = None #models.IntegerField("Start IP Protocol Number" , null=True, default=0x00)
+    ip_proto_e          = None #models.IntegerField("End IP Protocol Number" , null=True, default=0xFF)
+    tp_src_s            = None #models.IntegerField("Start Source Transport Port" , null=True, default=0x0000)
+    tp_src_e            = None #models.IntegerField("End Source Transport Port" , null=True, default=0xFFFF)
+    tp_dst_s            = None #models.IntegerField("Start Destination Transport Port" , null=True, default=0x0000)
+    tp_dst_e            = None #models.IntegerField("End Destination Transport Port" , null=True, default=0xFFFF)
 
     def stringify(self):
         return "%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s"%(
