@@ -86,9 +86,10 @@ def postinst (opts):
   symlink("/etc/nginx/sites-available/foam.conf", "/etc/nginx/sites-enabled/foam.conf")
   copyfile("%s/debian/init.d" % (os.getcwd()), "/etc/init.d/foam")
   #making /etc/init.d/foam executable  
-  call("chmod +x /etc/init.d/foam")
+  call("chmod +x /etc/init.d/foam", False, False)
   # Maybe ask if you really want to revert setup.py right now?
   #call("hg revert setup.py src/foam/version.py --no-backup")
+  call("git checkout setup.py", False, False) #revert all changes to setup (to be used later...)
 
 def parse_args (argv):
   parser = OptionParser()
@@ -108,7 +109,7 @@ def main ():
       print "You must commit all changes before running this installer."
       sys.exit(1)
 
-  #fixup_version(opts)
+  #fixup_version(opts) #deactivated for now (not crucial)
   install_foam()
   install_deps()
   postinst(opts)
