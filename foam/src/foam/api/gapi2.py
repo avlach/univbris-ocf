@@ -49,6 +49,7 @@ class AdditionalException(Exception):
 class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 	def __init__ (self, log):
 		super(AMAPIv2, self).__init__("GAPIv2", log)
+		self._actionLog = KeyAdapter("v2", logging.getLogger('gapi-actions'))
 	
 	def recordAction (self, action, credentials = [], urn = None):
 		cred_ids = []

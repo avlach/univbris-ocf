@@ -110,7 +110,15 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       this_user = kwargs['user']
       if not this_user.get_profile().is_clearinghouse_user:
         raise Exception("Remote user %s is not a clearinghouse user" % (this_user.username))
-    '''     
+    '''  
+		#right now you can use foo creds for connection		
+    if "request" not in kwargs:
+      raise Exception("Request not available for XML-RPC %s" % \
+                      func.func_name)  
+    if not hasattr(kwargs["request"], "user"):
+      raise Exception("Authentication Middleware not installed in settings.")
+    kwargs['user'] = kwargs['request'].user
+    
     return func(*args, **kwargs)
 
   #modified, checked
