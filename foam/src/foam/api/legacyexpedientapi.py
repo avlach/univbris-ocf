@@ -570,28 +570,37 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
               gfs_list.append(fs_dict)
       
       return gfs_list
-    '''
-    #legacy gfs parsing  
-    try:
-        exp = Experiment.objects.filter(slice_id = slice_id)
-        if exp and len(exp) == 1:
-            opts = exp[0].useropts_set.all()
-            if opts:
-                gfs = opts[0].optsflowspace_set.all()
-                gfs = parse_granted_flowspaces(gfs)
-            else:
-                gfs = []
-        else:
-            gfs = []			
-    except Exception,e:
-        import traceback
-        traceback.print_exc()
-        raise Exception(parseFVexception(e))
-    '''
+
+#    #legacy gfs parsing  
+#    try:
+#        exp = Experiment.objects.filter(slice_id = slice_id)
+#        if exp and len(exp) == 1:
+#            opts = exp[0].useropts_set.all()
+#            if opts:
+#                gfs = opts[0].optsflowspace_set.all()
+#                gfs = parse_granted_flowspaces(gfs)
+#            else:
+#                gfs = []
+#        else:
+#            gfs = []			
+#    except Exception,e:
+#        import traceback
+#        traceback.print_exc()
+#        raise Exception(parseFVexception(e))
+
     slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
-    #NEED TO PARSE GRANTED FS USING FOAM FUNCTIONS!
-    #return gfs
-    return [] 
+    sliv_urn = GeniDB.getSliverURN(slice_urn)
+    if sliv_urn is None:
+      raise Exception(parseFVexception(e))
+    sliver = GeniDB.getSliverObj(sliv_urn) 
+    is_allocated_by_FV = GeniDB.getEnabled(sliv_urn)
+    if is_allocated_by_FV == True:
+      fspecs = sliver.getFlowspecs()
+      #TODO: need to parse fspecs so that expedient understands them
+      return [] #for now, will fix it
+    else:
+      return [] 
+     
 
   #modified, to be checked
   #@check_user
