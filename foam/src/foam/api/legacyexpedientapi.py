@@ -82,7 +82,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
 
   #modified, checked
   #@decorator
-  def check_fv_set(func, *arg, **kwargs):
+  def pub_check_fv_set(self, func, *arg, **kwargs):
     if (FV.xmlconn is None):
       raise Exception("No xlmlrpc connection with Flowvisor detected")
     if (FV.jsonconn is None):
@@ -91,7 +91,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
 
   #as is
   #@decorator
-  def check_user(func, *args, **kwargs):
+  def pub_check_user(self, func, *args, **kwargs):
     '''
     #Check that the user is authenticated and known.
     
@@ -124,7 +124,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #modified, checked
   #@check_user
   #@rpcmethod()
-  def checkFlowVisor( *arg, **kwargs):
+  def pub_checkFlowVisor(self, *arg, **kwargs):
     if (FV.xmlconn is None):
       raise Exception("No xlmlrpc connection with Flowvisor detected")
     if (FV.jsonconn is None):
@@ -132,7 +132,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     return ""
 
   #as is
-  def convert_star(fs):
+  def pub_convert_star(self, fs):
     temp = fs.copy()
     for ch_name, (to_str, from_str, width, om_name, of_name) in \
     om_ch_translate.attr_funcs.items():
@@ -145,7 +145,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     return temp
 
   #as is  
-  def convert_star_int(fs):
+  def pub_convert_star_int(self, fs):
     temp = fs.copy()
     for ch_name, (to_str, from_str, width, om_name, of_name) in \
     om_ch_translate.attr_funcs.items():
@@ -162,7 +162,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     return temp
 
   #as is
-  def get_direction(direction):
+  def pub_get_direction(self, direction):
     if (direction == 'ingress'):
       return 0
     if (direction == 'egress'):
@@ -178,7 +178,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #                      'string', 'string', 'string',
   #                      'string', 'string', 'string',
   #                      'array', 'array'])
-  def create_slice(slice_id, project_name, project_description,
+  def pub_create_slice(self, slice_id, project_name, project_description,
                     slice_name, slice_description, controller_url,
                     owner_email, owner_password,
                     switch_slivers, **kwargs):               
@@ -385,7 +385,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_user
   #@check_fv_set
   #@rpcmethod(signature=['string', 'int'])
-  def delete_slice(sliceid, **kwargs):
+  def pub_delete_slice(self, sliceid, **kwargs):
     '''
     Delete the slice with id sliceid.
     
@@ -426,7 +426,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_user
   #@check_fv_set
   #@rpcmethod(signature=['array'])
-  def get_switches(**kwargs):
+  def pub_get_switches(self, **kwargs):
     '''
     Return the switches that the FlowVisor gives. Change to CH format.
     '''
@@ -448,7 +448,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_user
   #@check_fv_set
   #@rpcmethod(signature=['array'])
-  def get_links(**kwargs):
+  def pub_get_links(self, **kwargs):
     '''
     Return the links that the FlowVisor gives. Change to CH format.
     '''
@@ -469,7 +469,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #to be coded-----------------------------------------------------------------------  
   #@check_user
   #@rpcmethod(signature=['string', 'string', 'string'])
-  def register_topology_callback(url, cookie, **kwargs):
+  def pub_register_topology_callback(self, url, cookie, **kwargs):
   #next step: see how this &*^&*$#@ information can be propagated to Expedient directly
   #we need the topology to be automatically updated (not only manually)
     '''  
@@ -485,7 +485,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #as is, probably needs changes because of DB refs  
   #@check_user
   #@rpcmethod(signature=['string', 'string'])
-  def change_password(new_password, **kwargs):
+  def pub_change_password(self, new_password, **kwargs):
     '''
     Change the current password used for the clearinghouse to 'new_password'.
     
@@ -508,7 +508,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #modified, to be checked    
   #@check_user
   #@rpcmethod(signature=['string', 'string'])
-  def ping(data, **kwargs):
+  def pub_ping(self, data, **kwargs):
     try:
       FV.log.debug("XMLRPC:ping (%s)" % ())
       return FV.xmlcall("ping" + " " + str(data)) #this will return a PONG is everything alright
@@ -521,7 +521,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_user
   #@check_fv_set
   #@rpcmethod()
-  def get_granted_flowspace(slice_id, **kwargs):
+  def pub_get_granted_flowspace(self, slice_id, **kwargs):
     '''
     Return FlowVisor Rules for the slice.
     '''
@@ -606,14 +606,21 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_user
   #@check_fv_set
   #@rpcmethod()
-  def get_offered_vlans(set=None):
+  def pub_get_offered_vlans(self, set=None):
     return admin.adminOfferVlanTags(set, False)
+
+  def pub_test_api_access(self, sayHello):
+    if sayHello == 1:
+      return "Hello"
+    else:
+      return "Bye"
 
 #setup legacy API  
 def setup (app):
   legexpapi = XMLRPCHandler('legacyexpedientapi')
-  legexpapi.connect(app, '/foam/legacyexpedientapi')
+  legexpapi.connect(app, '/core/legacyexpedientapi')
+  #legexpapi = AMLegExpAPI(app)
   legexpapi.register_instance(AMLegExpAPI(app.logger))
   app.logger.info("[LegacyExpedientAPI] Loaded.")
-
+  return legexpapi
 

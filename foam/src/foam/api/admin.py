@@ -380,7 +380,7 @@ class AdminAPIv1(Dispatcher):
   #VLAN handling code-base start
 	
   #Vasileios's code for listing free vlans (before Leo's vlancontroller)
-  @route('/core/admin/list-vlans', methods=["POST"])
+  @route('/core/admin/list-vlans', methods=["POST", "GET"])
   def adminListVLANs (self, use_json = True):
     if not request.json:
       return
@@ -424,7 +424,7 @@ class AdminAPIv1(Dispatcher):
   #of the following methods
 
   #Vasileios: adapt vlanController.get_allocated_vlans method
-  @route('/core/admin/list-allocated-vlans', methods=["POST"])
+  @route('/core/admin/list-allocated-vlans', methods=["POST", "GET"])
   def adminListAllocatedVlans(self, use_json = True):
     if not request.json:
       return
@@ -451,7 +451,7 @@ class AdminAPIv1(Dispatcher):
       return jsonify(None, code = 2, msg = traceback.format_exc())
 
   #Vasileios: adapt vlanController.get_allocated_vlans_sorted method
-  @route('/core/admin/list-allocated-vlans-sorted', methods=["POST"])
+  @route('/core/admin/list-allocated-vlans-sorted', methods=["POST", "GET"])
   def adminListAllocatedVlansSorted(self, use_json = True):
     if not request.json:
       return
@@ -476,7 +476,7 @@ class AdminAPIv1(Dispatcher):
       return jsonify(None, code = 2, msg = traceback.format_exc())
 
   #Vasileios: adapt vlanController.offer_vlan_tags method
-  @route('/core/admin/offer-vlan-tags', methods=["POST"])
+  @route('/core/admin/offer-vlan-tags', methods=["POST", "GET"])
   def adminOfferVlanTags(self, set=None, use_json = True):
     if not request.json:
       return

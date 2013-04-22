@@ -376,7 +376,8 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 
 #setup same as gapi1 (change version nums of course)
 def setup (app):
-	gapi2 = XMLRPCHandler('gapi2')
-	gapi2.connect(app, '/foam/gapi/2')
-	gapi2.register_instance(AMAPIv2(app.logger))
-	app.logger.info("[GAPIv2] Loaded.")
+  gapi2 = XMLRPCHandler('gapi2')
+  gapi2.connect(app, '/foam/gapi/2')
+  gapi2.register_instance(AMAPIv2(app.logger))
+  app.logger.info("[GAPIv2] Loaded.")
+  return gapi2

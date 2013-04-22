@@ -259,5 +259,6 @@ def setup (app):
   gapi1.connect(app, '/foam/gapi/1')
   gapi1.register_instance(AMAPIv1(app.logger))
   app.logger.info("[GAPIv1] Loaded.")
+  return gapi1
 
 
