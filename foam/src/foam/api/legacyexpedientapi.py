@@ -79,6 +79,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   def __init__ (self, log):
     super(AMLegExpAPI, self).__init__("legacyexpedientapi", log)
     self._actionLog = KeyAdapter("expedient", logging.getLogger('legexpapi-actions'))
+    self.slice_info_dict = {} #needed for storing info that can easily be retrieved
+    #without parsing foam rspecs
 
   #modified, checked
   #@decorator
@@ -299,6 +301,17 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     e.owner_email = owner_email
     e.owner_password = owner_password
     #e.save()
+    #update dict info
+    self.slice_info_dict['slice_id'] = {}
+    self.slice_info_dict['slice_id']['slice_id'] = slice_id
+    self.slice_info_dict['slice_id']['project_name'] = project_name
+    self.slice_info_dict['slice_id']['project_desc'] = project_description
+    self.slice_info_dict['slice_id']['slice_name'] = slice_name
+    self.slice_info_dict['slice_id']['slice_desc'] = slice_description
+    self.slice_info_dict['slice_id']['controller_url'] = controller_url
+    self.slice_info_dict['slice_id']['owner_email'] = owner_email
+    self.slice_info_dict['slice_id']['owner_password'] = owner_password
+    self.slice_info_dict['slice_id']['switch_slivers'] = switch_slivers 
 
     
     #legacy create slice flowspaces
@@ -335,6 +348,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
               setattr(efs,om_start,from_str(fs[ch_start]))
               setattr(efs,om_end,from_str(fs[ch_end]))
           all_efs.append(efs)
+    self.slice_info_dict['slice_id']['all_efs'] = all_efs
     
     #set the necessary parameters so that we can use FOAM internal functions for sliver creation
     #Vasileios: now that the requested flowspaces are identified, create the rspec (to be used in FOAM)
@@ -419,6 +433,40 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
     creds = []
     deleted_slice_info = gapi2_apih.pub_DeleteSliver(slice_urn, creds, [])
+    
+    return ""
+  
+  #@check_user
+  #@rpcmethod(signature=['string', 'string', 'array'])
+  def pub_change_slice_controller(self, slice_id, controller_url, **kwargs):
+    '''
+    Changes the slice controller url.
+    '''
+    slice_of_rspec = create_ofv3_rspec(slice_id, self.slice_info_dict['slice_id']['project_name'], 
+                                       self.slice_info_dict['slice_id']['project_desc'],
+                                       self.slice_info_dict['slice_id']['slice_name'],
+                                       self.slice_info_dict['slice_id']['slice_desc'], controller_url,
+                                       self.slice_info_dict['slice_id']['owner_email'],
+                                       self.slice_info_dict['slice_id']['owner_password'],
+                                       self.slice_info_dict['slice_id']['switch_slivers'],
+                                       self.slice_info_dict['slice_id']['all_efs'])
+    self.slice_info_dict['slice_id']['controller_url'] = controller_url
+    slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
+    creds = [] #creds are not needed at least for now: to be fixed
+    user_info = {}
+    user_info["urn"] = "urn:publicid:IDN+" + "openflow:fp7-ofelia.eu:ocf:ch+" + "user+" + str(owner_email) #temp hack
+    user_info["email"] = str(owner_email)
+    #updating the slice in FV
+    try:
+      old_exp_shutdown_success = gapi2_apih.pub_Shutdown(slice_urn, creds, [])
+    except Exception, e:
+      import traceback
+      traceback.print_exc()
+      raise Exception("Exception while trying to shutdown old slice!")
+    if old_exp_shutdown_success == False:
+      raise Exception("Old slice could not be shutdown")
+    #create new slice
+    created_slice_info = gapi2_apih.createSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
     
     return ""
 
@@ -595,9 +643,17 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     sliver = GeniDB.getSliverObj(sliv_urn) 
     is_allocated_by_FV = GeniDB.getEnabled(sliv_urn)
     if is_allocated_by_FV == True:
-      fspecs = sliver.getFlowspecs()
-      #TODO: need to parse fspecs so that expedient understands them
-      return [] #for now, will fix it
+      #that means that the flow space as requested was allocated
+      #so retrieve the fs in the form Expedient understands
+      #TODO: check that ecery time this corresponds to the actual flowspec that FOAM has
+      all_efs = self.slice_info_dict['slice_id']['all_efs']      
+      try:      
+        gfs = parse_granted_flowspaces(gfs)
+      except Exception,e:
+        import traceback
+        traceback.print_exc()
+        raise Exception(parseFVexception(e))
+      return gfs
     else:
       return [] 
      
