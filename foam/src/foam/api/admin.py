@@ -379,11 +379,11 @@ class AdminAPIv1(Dispatcher):
 
   #VLAN handling code-base start
 	
-  #Vasileios's code for listing free vlans (before Leo's vlancontroller)
+  #Vasileios's code for listing all vlans (before Leo's vlancontroller)
   @route('/core/admin/list-vlans', methods=["POST", "GET"])
-  def adminListVLANs (self, use_json = True):
-    if not request.json:
-      return
+  def adminListVLANs (self): #use_json = True
+    #if not request.json:
+    #  return
     try:			
       global_vlan_list = {}
       for i in range(4095):
@@ -408,10 +408,10 @@ class AdminAPIv1(Dispatcher):
           allocated_vlan_list.append(i)	
       allocated_vlan_list.sort()
 		
-      if (use_json == True):
-        return jsonify({"free-vlans" : free_vlan_list, "allocated-vlans" : allocated_vlan_list})
-      else:
-        return {"free-vlans" : free_vlan_list, "allocated-vlans" : allocated_vlan_list}
+      #if (use_json == True):
+      return jsonify({"free-vlans" : free_vlan_list, "allocated-vlans" : allocated_vlan_list})
+      #else:
+      #  return {"free-vlans" : free_vlan_list, "allocated-vlans" : allocated_vlan_list}
 		
     except JSONValidationError, e:
       jd = e.__json__()
@@ -426,8 +426,8 @@ class AdminAPIv1(Dispatcher):
   #Vasileios: adapt vlanController.get_allocated_vlans method
   @route('/core/admin/list-allocated-vlans', methods=["POST", "GET"])
   def adminListAllocatedVlans(self, use_json = True):
-    if not request.json:
-      return
+    #if not request.json:
+    #  return
     try:
       used_vlans = []
       slivers = GeniDB.getSliverList(False, True, True)
@@ -452,9 +452,9 @@ class AdminAPIv1(Dispatcher):
 
   #Vasileios: adapt vlanController.get_allocated_vlans_sorted method
   @route('/core/admin/list-allocated-vlans-sorted', methods=["POST", "GET"])
-  def adminListAllocatedVlansSorted(self, use_json = True):
-    if not request.json:
-      return
+  def adminListAllocatedVlansSorted(self): #use_json = True
+    #if not request.json:
+    #  return
     try:		
       used_vlans = self.adminListAllocatedVlans(False)
       sorted_vlans = [0 for x in xrange(4)]
@@ -463,10 +463,10 @@ class AdminAPIv1(Dispatcher):
       sorted_vlans[2] = [x for x in used_vlans if x > 2000 and x <= 3000]
       sorted_vlans[3] = [x for x in used_vlans if x > 3000]
 		
-      if (use_json == True):
-        return jsonify({"allocated-vlans-sorted" : sorted_vlans})
-      else:
-        return sorted_vlans
+      #if (use_json == True):
+      return jsonify({"allocated-vlans-sorted" : sorted_vlans})
+      #else:
+      #  return sorted_vlans
 	
     except JSONValidationError, e:
       jd = e.__json__()
@@ -477,19 +477,29 @@ class AdminAPIv1(Dispatcher):
 
   #Vasileios: adapt vlanController.offer_vlan_tags method
   @route('/core/admin/offer-vlan-tags', methods=["POST", "GET"])
-  def adminOfferVlanTags(self, set=None, use_json = True):
+  def adminOfferVlanTags(self, set=None): #use_json = True
     if not request.json:
       return
     try:
-      if not set:
-        returnval = [x for x in range(1,4095) if x not in self.adminListAllocatedVlans(False) and x not in ofvlset.UNALLOWED_VLANS]
-      elif set in range(1,4095):
-        returnval = [x for x in range(1,4095) if x not in self.adminListAllocatedVlans(False) and x not in ofvlset.UNALLOWED_VLANS][:set]  
-		
-      if (use_json == True):
-        return jsonify({"offered-vlan-tags" : returnval})
-      else:
-        return returnval
+      self.validate(request.json, [("vlan_set", (int))])
+      vlan_set = request.json["vlan_set"]
+      if not set: #use json arg     
+        if vlan_set == 0:
+          returnval = [x for x in range(1,4095) if x not in self.adminListAllocatedVlans(False) and x not in ofvlset.UNALLOWED_VLANS]
+        elif vlan_set in range(1,4095):
+          returnval = [x for x in range(1,4095) if x not in self.adminListAllocatedVlans(False) and x not in ofvlset.UNALLOWED_VLANS][:vlan_set]
+        else:
+          returnval = None
+      else: #override json arg
+        if set in range(1,4095):
+          returnval = [x for x in range(1,4095) if x not in self.adminListAllocatedVlans(False) and x not in ofvlset.UNALLOWED_VLANS][:set]
+        else:
+          returnval = None
+
+      #if (use_json == True):
+      return jsonify({"offered-vlan-tags" : returnval})
+      #else:
+      #  return returnval
 		
     except JSONValidationError, e:
       jd = e.__json__()

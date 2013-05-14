@@ -547,6 +547,63 @@ def do_setupEmail (opts):
   obj = { "key" : "email.reply-to", "value" : reply_to }
   data = connect(url, opts.C_user, passwd, obj)
 
+#Vasileios: VLAN handling (see admin.py for source code) start
+
+def pa_listVlans (args):
+  parser = OptionParser()
+  addCommonOpts(parser)
+  (options, args) = parser.parse_args(args)
+  return options
+
+def do_listVlans (opts):
+  passwd = getPassword(opts)
+  url = URL % (opts.host, "list-vlans")
+  obj = None
+  data = connect(url, opts.C_user, passwd, obj)
+  outputJSON(data)
+
+def pa_listAllocVlans (args):
+  parser = OptionParser()
+  addCommonOpts(parser)
+  (options, args) = parser.parse_args(args)
+  return options
+
+def do_listAllocVlans (opts):
+  passwd = getPassword(opts)
+  url = URL % (opts.host, "list-allocated-vlans")
+  obj = None
+  data = connect(url, opts.C_user, passwd, obj)
+  outputJSON(data) 
+
+def pa_listAllocVlansSorted (args):
+  parser = OptionParser()
+  addCommonOpts(parser)
+  (options, args) = parser.parse_args(args)
+  return options
+
+def do_listAllocVlansSorted (opts):
+  passwd = getPassword(opts)
+  url = URL % (opts.host, "list-allocated-vlans-sorted")
+  obj = None
+  data = connect(url, opts.C_user, passwd, obj)
+  outputJSON(data)
+
+def pa_offerVlanTags (args):
+  parser = OptionParser()
+  addCommonOpts(parser)
+  parser.add_option("--vlanset", default=0, dest="vlan_set")
+  (options, args) = parser.parse_args(args)
+  return options
+
+def do_offerVlanTags (opts):
+  passwd = getPassword(opts)
+  url = URL % (opts.host, "offer-vlan-tags")
+  obj = {"vlan_set" : opts.vlan_set}
+  data = connect(url, opts.C_user, passwd, obj)
+  outputJSON(data)
+
+#Vasileios: VLAN handling (see admin.py for source code) end
+
 def connect (url, user, passwd, data = None):
   try:
     passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
@@ -658,6 +715,10 @@ CMDS = {
     'geni:approval:remove-port' : (pa_portgroup, do_geniApprovalPGRemovePort),
     'geni:approval:list-port-groups' : (pa_defaults, do_geniApprovalPGList),
     'geni:approval:show-port-group' : (pa_portgroup, do_geniApprovalPGShow),
+    'ofelia:adminListVLANs' : (pa_listVlans, do_listVlans),
+    'ofelia:adminListAllocatedVlans' : (pa_listAllocVlans, do_listAllocVlans),
+    'ofelia:adminListAllocatedVlansSorted' : (pa_listAllocVlansSorted, do_listAllocVlansSorted),
+    'ofelia:adminOfferVlanTags' : (pa_offerVlanTags, do_offerVlanTags),
 }
 
 if __name__ == '__main__':
