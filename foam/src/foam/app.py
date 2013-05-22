@@ -57,9 +57,12 @@ geni_apih = geni.setup(app) #Vasileios: get the returned api handlers
 
 #here check maybe ofelia-geni api collaboration
 
-#modified by Vasileios, load afterwards
 from foam.api import gapi2
 gapi2_apih = gapi2.setup(app) #Vasileios: get the returned api handlers
+
+#modified by Vasileios, load afterwards
+from foam.api import legacyexpgapi2
+legexpgapi2_apih = legacyexpgapi2.setup(app) #Vasileios: get the returned api handlers
 
 #modified by Vasileios, load afterwards
 from foam.api import legacyexpedientapi #Vasileios: get the returned api handlers
