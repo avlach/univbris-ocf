@@ -483,7 +483,7 @@ class AdminAPIv1(Dispatcher):
     try:
       self.validate(request.json, [("vlan_set", (int))])
       vlan_set = request.json["vlan_set"]
-      if not set: #use json arg     
+      if set is None: #use json arg     
         if vlan_set == 0:
           returnval = [x for x in range(1,4095) if x not in self.adminListAllocatedVlans(False) and x not in ofvlset.UNALLOWED_VLANS]
         elif vlan_set in range(1,4095):
