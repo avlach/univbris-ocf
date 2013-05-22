@@ -89,10 +89,13 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
             '2': url + '/foam/gapi/2'
           }
         }
-    if ConfigDB.getConfigItemByKey("geni.report-foam-version").getValue():
+    #if ConfigDB.getConfigItemByKey("geni.report-foam-version").getValue():
+    #  d["foam_version"] = foam.version.VERSION
+    #if ConfigDB.getConfigItemByKey("geni.report-site-info").getValue():
+    #  d["site_info"] = self.generateSiteInfo()
+    if GAPI_REPORTFOAMVERSION:
       d["foam_version"] = foam.version.VERSION
-    if ConfigDB.getConfigItemByKey("geni.report-site-info").getValue():
-      d["site_info"] = self.generateSiteInfo()
+    d["site_info"] = self.generateSiteInfo()
 
     result = self.buildPropertyList(GENI_ERROR_CODE.SUCCESS, value=d)
 
