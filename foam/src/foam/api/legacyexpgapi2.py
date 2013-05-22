@@ -46,14 +46,14 @@ class AdditionalException(Exception):
 	pass
 	
 
-class AMAPIv2(foam.api.xmlrpc.Dispatcher):
+class AMLegExpGeniAPIv2(foam.api.xmlrpc.Dispatcher):
 	def __init__ (self, log):
-		super(AMAPIv2, self).__init__("GAPIv2", log)
-		self._actionLog = KeyAdapter("v2", logging.getLogger('gapi-actions'))
+		super(AMLegExpGeniAPIv2, self).__init__("LegExpGAPIv2", log)
+		self._actionLog = KeyAdapter("legv2", logging.getLogger('gapi-actions'))
 	
 	def recordAction (self, action, credentials = [], urn = None):
 		cred_ids = []
-		self._actionLog.info("Sliver: %s  GAPIv2 Action: %s" % (urn, action))
+		self._actionLog.info("Sliver: %s  LegExpGAPIv2 Action: %s" % (urn, action))
 		for cred in credentials:
 			self._actionLog.info("Credential: %s" % (cred))
 		
@@ -376,8 +376,8 @@ class AMAPIv2(foam.api.xmlrpc.Dispatcher):
 
 #setup same as gapi1 (change version nums of course)
 def setup (app):
-  gapi2 = XMLRPCHandler('gapi2')
-  gapi2.connect(app, '/foam/gapi/2')
-  gapi2.register_instance(AMAPIv2(app.logger))
-  app.logger.info("[GAPIv2] Loaded.")
-  return gapi2
+  legexpgapi2 = XMLRPCHandler('legexpgapi2')
+  legexpgapi2.connect(app, '/foam/legexpgapi/2')
+  legexpgapi2.register_instance(AMLegExpGeniAPIv2(app.logger))
+  app.logger.info("[LegExpGAPIv2] Loaded.")
+  return legexpgapi2
