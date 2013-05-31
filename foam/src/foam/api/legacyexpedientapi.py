@@ -639,7 +639,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
     sliv_urn = GeniDB.getSliverURN(slice_urn)
     if sliv_urn is None:
-      raise Exception(parseFVexception(e))
+      return []
+      #raise Exception(parseFVexception(e))
     sliver = GeniDB.getSliverObj(sliv_urn) 
     is_allocated_by_FV = GeniDB.getEnabled(sliv_urn)
     if is_allocated_by_FV == True:
