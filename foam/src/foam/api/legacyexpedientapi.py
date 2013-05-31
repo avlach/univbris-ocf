@@ -338,7 +338,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
               efs.direction = self.get_direction(sfs['direction'])
           else:
               efs.direction = 2       
-          fs = self.convert_star(sfs)
+          fs = self.pub_convert_star(sfs)
           for attr_name,(to_str, from_str, width, om_name, of_name) in \
           om_ch_translate.attr_funcs.items():
               ch_start ="%s_start"%(attr_name)
@@ -663,7 +663,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_fv_set
   #@rpcmethod()
   def pub_get_offered_vlans(self, set=None):
-    return admin.adminOfferVlanTags(set, False)
+    return admin_apih.adminOfferVlanTags(set, False)
 
   def pub_test_api_access(self, sayHello):
     if sayHello == 1:

@@ -38,6 +38,7 @@ def extract_IP_mask_from_IP_range(IP1, IP2):
 
 	return [networkIP, netmaskSize]
 
+
 #main function for creation of rspec
 def create_ofv3_rspec(slice_id, project_name, project_description,
 						slice_name, slice_description, controller_url,
@@ -96,15 +97,15 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 	ofgroupdpports = []
 	i=0
 	j=0
-	for dpid in dpids:
+	for dpid in ofdpids:
 		ofgroupdatapaths.append(etree.SubElement(ofgroup, "{"+openflow+"}datapath"))
 		#ofgroupatapaths[i].set("component_id", "urn:publicid:IDN+openflow:foam:foam.example.net+datapath+"+str(dpid))
 		#ofgroupdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:foam:foam.example.net+authority+am")
-		ofgroupatapaths[i].set("component_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+datapath+"+str(dpid))
+		ofgroupdatapaths[i].set("component_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+datapath+"+str(dpid))
 		ofgroupdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+authority+am")
 		for dpp in ofdpports[dpid]: 
 			ofgroupdpports.append(etree.SubElement(ofgroupdatapaths[i], "{"+openflow+"}port"))
-			ofgroupdpports[j].set("num", dpp) #we will see about the name attribute
+			ofgroupdpports[j].set("num", str(dpp)) #we will see about the name attribute
 			j = j + 1
 		i=i+1
 		
@@ -131,7 +132,7 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 			ofmatchdpports[j].set("num", port_number)
 			j=j+1
 		ofmatchdpports.append(etree.SubElement(ofmatchdatapaths[i], "{"+openflow+"}port"))
-		ofmatchdpports[j].set("num", experimentflowspace.port_number_e)
+		ofmatchdpports[j].set("num", str(experimentflowspace.port_number_e))
 		j=j+1
 		
 		#match packet (flowspace)
@@ -142,37 +143,39 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 				om_end = "%s_e"%(om_name)
 				fieldName = of_name
 				fieldValue = ""
-				field_start_value_int = experimentflowspace.om_start
-				field_end_value_int = experimentflowspace.om_end
-				ofmatchdppktfsfields.append(etree.SubElement(ofmatchdppackets[i], "{"+openflow+"}"+fieldName))
-				if (fieldName is "dl_src"):
-					if len(range(field_start_value_int,field_end_value_int)) is 0:	#single value
+				field_start_value_int = getattr(experimentflowspace, om_start)
+				field_end_value_int = getattr(experimentflowspace, om_end)
+				#full_wildcard_flag = True
+				if (field_start_value_int == 0) and (field_end_value_int == (2**width - 1)):
+					continue
+				if (fieldName is "dl_src"):	
+					if len(xrange(field_start_value_int,field_end_value_int)) is 0:	#single value
 						fieldValue = int_to_mac(field_start_value_int)
 					else:
-						for dl_src in range(field_start_value_int,field_end_value_int):	#range (discrete values)
+						for dl_src in xrange(field_start_value_int,field_end_value_int):	#range (discrete values)
 							fieldValue = fieldValue + int_to_mac(dl_src) +", "
 						fieldValue = fieldValue + int_to_mac(field_end_value_int)
 				elif (fieldName is "dl_dst"):
-					if len(range(field_start_value_int,field_end_value_int)) is 0:	#single value
+					if len(xrange(field_start_value_int,field_end_value_int)) is 0:	#single value
 						fieldValue = int_to_mac(field_start_value_int)
 					else:
-						for dl_dst in range(field_start_value_int,field_end_value_int):	#range (discrete values)
+						for dl_dst in xrange(field_start_value_int,field_end_value_int):	#range (discrete values)
 							fieldValue = fieldValue + int_to_mac(dl_dst) +", "	
 						fieldValue = fieldValue + int_to_mac(field_end_value_int)
 				elif (fieldName is "dl_type"):
-					if len(range(field_start_value_int,field_end_value_int)) is 0:	#single value
+					if len(xrange(field_start_value_int,field_end_value_int)) is 0:	#single value
 						fieldValue = int_to_mac(field_start_value_int)
 					else:
-						for dl_type in range(field_start_value_int,field_end_value_int): #range (discrete values)
-							fieldValue = fieldValue + str(hex(dl_dst)) +", " 
+						for dl_type in xrange(field_start_value_int,field_end_value_int): #range (discrete values)
+							fieldValue = fieldValue + str(hex(dl_type)) +", " 
 						fieldValue = fieldValue + hex(field_end_value_int)
 				elif (fieldName is "dl_vlan"):
-					if len(range(field_start_value_int,field_end_value_int)) is 0: #single value
+					if len(xrange(field_start_value_int,field_end_value_int)) is 0: #single value
 						fieldValue = str(field_start_value_int)
 					else:	#range (continuous)
 						fieldValue = str(field_start_value_int) + "-" + str(field_end_value_int)
 				elif (fieldName is "nw_proto"):	
-					if len(range(field_start_value_int,field_end_value_int)) is 0: #single value
+					if len(xrange(field_start_value_int,field_end_value_int)) is 0: #single value
 						fieldValue = str(field_start_value_int)
 					else:	#range (continuous)
 						fieldValue = str(field_start_value_int) + "-" + str(field_end_value_int)
@@ -183,17 +186,18 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 					[netIP, netBitNum] = extract_IP_mask_from_IP_range(int_to_dotted_ip(field_start_value_int), int_to_dotted_ip(field_end_value_int))
 					fieldValue = netIP + "/" + str(netBitNum)
 				elif (fieldName is "tp_src"):
-					if len(range(field_start_value_int,field_end_value_int)) is 0: #single value
+					if len(xrange(field_start_value_int,field_end_value_int)) is 0: #single value
 						fieldValue = str(field_start_value_int)
 					else:	#range (continuous)
 						fieldValue = str(field_start_value_int) + "-" + str(field_end_value_int)
 				elif (fieldName is "tp_dst"):
-					if len(range(field_start_value_int,field_end_value_int)) is 0: #single value
+					if len(xrange(field_start_value_int,field_end_value_int)) is 0: #single value
 						fieldValue = str(field_start_value_int)
 					else:	#range (continuous)
 						fieldValue = str(field_start_value_int) + "-" + str(field_end_value_int)
 				
 				#assign the proper values to fields
+				ofmatchdppktfsfields.append(etree.SubElement(ofmatchdppackets[i], "{"+openflow+"}"+fieldName))
 				ofmatchdppktfsfields[k].set(fieldName, fieldValue)
 				k = k + 1
 		i = i+1
