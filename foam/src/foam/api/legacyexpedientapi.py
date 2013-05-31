@@ -558,7 +558,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@rpcmethod(signature=['string', 'string'])
   def pub_ping(self, data, **kwargs):
     try:
-      FV.log.debug("XMLRPC:ping (%s)" % ())
+      FV.log.debug("XMLRPC:ping (%s)" % (str(data)))
       return FV.xmlcall("ping" + " " + str(data)) #this will return a PONG is everything alright
     except Exception, e:
       import traceback
@@ -674,7 +674,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
 #setup legacy API  
 def setup (app):
   legexpapi = XMLRPCHandler('legacyexpedientapi')
-  legexpapi.connect(app, '/core/legacyexpedientapi')
+  legexpapi.connect(app, '/core/legacyexpedientapi/xmlrpc/')
   #legexpapi = AMLegExpAPI(app)
   legexpapi.register_instance(AMLegExpAPI(app.logger))
   app.logger.info("[LegacyExpedientAPI] Loaded.")
