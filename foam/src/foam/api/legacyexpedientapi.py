@@ -559,7 +559,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   def pub_ping(self, data, **kwargs):
     try:
       FV.log.debug("XMLRPC:ping (%s)" % (str(data)))
-      return FV.xmlcall("ping" + " " + str(data)) #this will return a PONG is everything alright
+      return FV.xmlcall("ping", " " + str(data)) #this will return a PONG is everything alright
     except Exception, e:
       import traceback
       traceback.print_exc()
