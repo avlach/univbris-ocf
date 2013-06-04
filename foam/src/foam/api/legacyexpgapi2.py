@@ -36,6 +36,8 @@ import os
 import uuid
 import xml.dom.minidom as minidom
 
+from foam.api.jsonrpc import Dispatcher, route
+
 
 #Vasileios: additional class to handle geni am return codes as in 
 #https://openflow.stanford.edu/display/FOAM/GENI+-+AM+return+code+proposal
@@ -378,6 +380,7 @@ class AMLegExpGeniAPIv2(foam.api.xmlrpc.Dispatcher):
 def setup (app):
   legexpgapi2 = XMLRPCHandler('legexpgapi2')
   legexpgapi2.connect(app, '/foam/legexpgapi/2')
+  #legexpgapi2 = AMLegExpGeniAPIv2(app)
   legexpgapi2.register_instance(AMLegExpGeniAPIv2(app.logger))
   app.logger.info("[LegExpGAPIv2] Loaded.")
   return legexpgapi2

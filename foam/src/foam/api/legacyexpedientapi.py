@@ -40,6 +40,7 @@ from foam.core.log import KeyAdapter
 
 #GENI API imports
 from foam.geni.db import GeniDB, UnknownSlice, UnknownNode
+import foam.geni.approval
 import foam.geni.ofeliaapproval
 import foam.geni.lib
 import sfa
@@ -51,8 +52,9 @@ from foam.flowvisor import Connection as FV
 from foam.app import admin_apih #admin is setup beforehand so handler is perfect for handling slices
 #from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import create_ofv3_rspec,\
 #    extract_IP_mask_from_IP_range
-from foam.app import legexpgapi2_apih #use legexpgapi2 handler
+#from foam.app import legexpgapi2_apih #use legexpgapi2 handler
 from pprint import pprint
+
 
 def _same(val):
 	return "%s" % val 
@@ -81,6 +83,85 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     self._actionLog = KeyAdapter("expedient", logging.getLogger('legexpapi-actions'))
     self.slice_info_dict = {} #needed for storing info that can easily be retrieved
     #without parsing foam rspecs
+
+  def priv_CreateSliver(self, slice_urn, credentials, rspec, users, options):	
+    #user_info = {}
+    user_info = users
+    try:
+      #if CredVerifier.checkValid(credentials, "createsliver"):
+      if True:
+        self.recordAction("createsliver", credentials, slice_urn)
+        try:
+          #cert = Certificate(request.environ['CLIENT_RAW_CERT'])
+          #user_info["urn"] = cert.getURN()
+          #user_info["email"] = cert.getEmailAddress()
+          self._log.debug("Parsed user cert with URN (%(urn)s) and email (%(email)s)" % user_info)
+        except Exception, e:
+          self._log.exception("UNFILTERED EXCEPTION")
+          user_info["urn"] = None
+          user_info["email"] = None
+        sliver = foam.geni.lib.createSliver(slice_urn, credentials, rspec, user_info)
+        style = ConfigDB.getConfigItemByKey("geni.approval.approve-on-creation").getValue()
+        if style == foam.geni.approval.NEVER:
+          approve = False
+        elif style == foam.geni.approval.ALWAYS:
+          approve = True
+        else:
+          approve = foam.geni.ofeliaapproval.of_analyzeForApproval(sliver)
+        if approve:
+          pid = foam.task.approveSliver(sliver.getURN(), AUTO_SLIVER_PRIORITY)
+          self._log.debug("task.py launched for approve-sliver (PID: %d)" % pid)	
+        data = GeniDB.getSliverData(sliver.getURN(), True)
+        foam.task.emailCreateSliver(data)
+        return self.successResult(GeniDB.getManifest(sliver.getURN()))
+      return
+		
+    except foam.geni.lib.RspecParseError, e:
+      self._log.info(str(e))
+      e._foam_logged = True
+      raise e
+    except foam.geni.lib.RspecValidationError, e:
+      self._log.info(str(e))
+      e._foam_logged = True
+      raise e
+    except foam.geni.lib.DuplicateSliver, ds:
+      self._log.info("Attempt to create multiple slivers for slice [%s]" % (ds.slice_urn))
+      ds._foam_logged = True
+      raise ds
+    except foam.geni.lib.UnknownComponentManagerID, ucm:
+      raise Fault("UnknownComponentManager", "Component Manager ID specified in %s does not match this aggregate." % (ucm.cid))
+    except (foam.geni.lib.UnmanagedComponent, UnknownNode), uc:
+      self._log.info("Attempt to request unknown component %s" % (uc.cid))
+      f = Fault("UnmanagedComponent", "DPID in component %s is unknown to this aggregate." % (uc.cid))
+      f._foam_logged = True
+      raise f
+    except Exception, e:
+      self._log.exception("Exception")
+      raise e
+		  
+  def priv_DeleteSliver(self, slice_urn, credentials, options):
+    try:
+      #if CredVerifier.checkValid(credentials, "deletesliver", slice_urn):
+      if True:
+        self.recordAction("deletesliver", credentials, slice_urn)
+        if GeniDB.getSliverURN(slice_urn) is None:
+          raise Fault("DeleteSliver", "Sliver for slice URN (%s) does not exist" % (slice_urn))
+          return self.errorResult(12, "") #not sure if this is needed
+        sliver_urn = GeniDB.getSliverURN(slice_urn)
+        data = GeniDB.getSliverData(sliver_urn, True)
+        foam.geni.lib.deleteSliver(sliver_urn = sliver_urn)
+        foam.task.emailGAPIDeleteSliver(data)
+        return self.successResult(True)
+      return self.successResult(False)
+		
+    except UnknownSlice, x:
+      self._log.info("Attempt to delete unknown sliver for slice URN %s" % (slice_urn))
+      x._foam_logged = True
+      raise x 
+    except Exception, e:
+      self._log.exception("Exception")
+      raise e
+
 
   #modified, checked
   #@decorator
@@ -267,17 +348,17 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     @rtype: dict
     '''
     
-    print "Legacy Expedient API: create_slice got the following:"
-    print "    slice_id: %s" % slice_id
-    print "    project_name: %s" % project_name
-    print "    project_desc: %s" % project_description
-    print "    slice_name: %s" % slice_name
-    print "    slice_desc: %s" % slice_description
-    print "    controller: %s" % controller_url
-    print "    owner_email: %s" % owner_email
-    print "    owner_pass: %s" % owner_password
-    print "    switch_slivers"
-    pprint(switch_slivers, indent=8)
+    self._actionLog.info("Legacy Expedient API: create_slice got the following:")
+    self._actionLog.info("    slice_id: %s" % slice_id)
+    self._actionLog.info("    project_name: %s" % project_name)
+    self._actionLog.info("    project_desc: %s" % project_description)
+    self._actionLog.info("    slice_name: %s" % slice_name)
+    self._actionLog.info("    slice_desc: %s" % slice_description)
+    self._actionLog.info("    controller: %s" % controller_url)
+    self._actionLog.info("    owner_email: %s" % owner_email)
+    self._actionLog.info("    owner_pass: %s" % owner_password)
+    #self._actionLog.info("    switch_slivers"
+    #pprint(switch_slivers, indent=8)
     
     #legacy experiment creation (old database access)
     '''    
@@ -365,7 +446,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     
     #now we have: slice_urn, creds, rspec and user_info : great!
     update_exp = True    
-    if GeniDB.getSliverURN(slice_urn) is None:
+    #if GeniDB.getSliverURN(slice_urn) is None:
+    if not GeniDB.sliceExists(slice_urn):
       update_exp = False    
 
     #moving on (now use gapi2 calls)
@@ -373,7 +455,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       try:
         #old_exp_fs.delete()
         #old_e.delete()
-        old_exp_shutdown_success = legexpgapi2_apih.pub_Shutdown(slice_urn, creds, [])
+        old_exp_shutdown_success = legexpgapi2_apih.call('Shutdown', slice_urn, creds, [])
       except Exception, e:
         import traceback
         traceback.print_exc()
@@ -382,7 +464,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
         raise Exception("Old slice could not be shutdown")
         
     #create new slice
-    created_slice_info = legexpgapi2_apih.pub_createSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
+    created_slice_info = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
     #legacy save flowspace
     #for fs in all_efs:
     #  fs.save()     
@@ -399,9 +481,9 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_user
   #@check_fv_set
   #@rpcmethod(signature=['string', 'int'])
-  def pub_delete_slice(self, sliceid, **kwargs):
+  def pub_delete_slice(self, slice_id, **kwargs):
     '''
-    Delete the slice with id sliceid.
+    Delete the slice with id slice_id.
     
     @param slice_id: an int that uniquely identifies the slice at the 
         Clearinghouseclearinghouse.
@@ -432,7 +514,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     #FOAM deletion
     slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
     creds = []
-    deleted_slice_info = legexpgapi2_apih.pub_DeleteSliver(slice_urn, creds, [])
+    deleted_slice_info = self.priv_DeleteSliver(slice_urn, creds, [])
     
     return ""
   
@@ -458,7 +540,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     user_info["email"] = str(owner_email)
     #updating the slice in FV
     try:
-      old_exp_shutdown_success = legexpgapi2_apih.pub_Shutdown(slice_urn, creds, [])
+      #old_exp_shutdown_success = legexpgapi2_apih.pub_Shutdown(slice_urn, creds, [])
+      old_exp_shutdown_success = self.priv_DeleteSliver(slice_urn, creds, [])
     except Exception, e:
       import traceback
       traceback.print_exc()
@@ -466,7 +549,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     if old_exp_shutdown_success == False:
       raise Exception("Old slice could not be shutdown")
     #create new slice
-    created_slice_info = legexpgapi2_apih.pub_gacreateSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
+    created_slice_info = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
     
     return ""
 
@@ -637,8 +720,9 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
 #        raise Exception(parseFVexception(e))
 
     slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
-    sliv_urn = GeniDB.getSliverURN(slice_urn)
-    if sliv_urn is None:
+    if GeniDB.sliceExists(slice_urn):
+      sliv_urn = GeniDB.getSliverURN(slice_urn)
+    else:
       return []
       #raise Exception(parseFVexception(e))
     sliver = GeniDB.getSliverObj(sliv_urn) 
@@ -672,6 +756,18 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       return "Hello"
     else:
       return "Bye"
+
+  def successResult(self, value):
+    code_dict = dict(geni_code=0)
+    return dict(code=code_dict,
+                value=value,
+                output="")
+          								
+  def errorResult(self, code, output):
+    code_dict = dict(geni_code=code)
+    return dict(code=code_dict,
+                value="",
+                output=output)
 
 #setup legacy API  
 def setup (app):
