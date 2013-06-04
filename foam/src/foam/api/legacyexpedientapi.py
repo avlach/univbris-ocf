@@ -84,7 +84,13 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     self.slice_info_dict = {} #needed for storing info that can easily be retrieved
     #without parsing foam rspecs
 
-  def priv_CreateSliver(self, slice_urn, credentials, rspec, users, options):	
+  def recordAction (self, action, credentials = [], urn = None):
+    cred_ids = []
+    self._actionLog.info("Sliver: %s  LegExpAPI Action: %s" % (urn, action))
+    for cred in credentials:
+      self._actionLog.info("Credential: %s" % (cred))
+
+  def priv_CreateSliver(self, slice_urn, credentials, rspec, users, options=None):	
     #user_info = {}
     user_info = users
     try:
@@ -139,7 +145,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       self._log.exception("Exception")
       raise e
 		  
-  def priv_DeleteSliver(self, slice_urn, credentials, options):
+  def priv_DeleteSliver(self, slice_urn, credentials, options=None):
     try:
       #if CredVerifier.checkValid(credentials, "deletesliver", slice_urn):
       if True:
