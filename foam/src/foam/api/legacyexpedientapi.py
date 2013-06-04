@@ -51,7 +51,7 @@ from foam.flowvisor import Connection as FV
 from foam.app import admin_apih #admin is setup beforehand so handler is perfect for handling slices
 #from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import create_ofv3_rspec,\
 #    extract_IP_mask_from_IP_range
-from foam.app import gapi2_apih #use gapi2 handler
+from foam.app import legexpgapi2_apih #use legexpgapi2 handler
 from pprint import pprint
 
 def _same(val):
@@ -373,7 +373,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       try:
         #old_exp_fs.delete()
         #old_e.delete()
-        old_exp_shutdown_success = gapi2_apih.pub_Shutdown(slice_urn, creds, [])
+        old_exp_shutdown_success = legexpgapi2_apih.pub_Shutdown(slice_urn, creds, [])
       except Exception, e:
         import traceback
         traceback.print_exc()
@@ -382,7 +382,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
         raise Exception("Old slice could not be shutdown")
         
     #create new slice
-    created_slice_info = gapi2_apih.createSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
+    created_slice_info = legexpgapi2_apih.pub_createSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
     #legacy save flowspace
     #for fs in all_efs:
     #  fs.save()     
@@ -432,7 +432,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     #FOAM deletion
     slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
     creds = []
-    deleted_slice_info = gapi2_apih.pub_DeleteSliver(slice_urn, creds, [])
+    deleted_slice_info = legexpgapi2_apih.pub_DeleteSliver(slice_urn, creds, [])
     
     return ""
   
@@ -458,7 +458,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     user_info["email"] = str(owner_email)
     #updating the slice in FV
     try:
-      old_exp_shutdown_success = gapi2_apih.pub_Shutdown(slice_urn, creds, [])
+      old_exp_shutdown_success = legexpgapi2_apih.pub_Shutdown(slice_urn, creds, [])
     except Exception, e:
       import traceback
       traceback.print_exc()
@@ -466,7 +466,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     if old_exp_shutdown_success == False:
       raise Exception("Old slice could not be shutdown")
     #create new slice
-    created_slice_info = gapi2_apih.createSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
+    created_slice_info = legexpgapi2_apih.pub_gacreateSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
     
     return ""
 
@@ -647,9 +647,10 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       #that means that the flow space as requested was allocated
       #so retrieve the fs in the form Expedient understands
       #TODO: check that ecery time this corresponds to the actual flowspec that FOAM has
-      all_efs = self.slice_info_dict['slice_id']['all_efs']      
+      all_efs = self.slice_info_dict['slice_id']['all_efs']  
+      gfs = []    
       try:      
-        gfs = parse_granted_flowspaces(gfs)
+        gfs = parse_granted_flowspaces(all_efs)
       except Exception,e:
         import traceback
         traceback.print_exc()
