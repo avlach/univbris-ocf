@@ -443,6 +443,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
                                       slice_name, slice_description, controller_url, \
                                       owner_email, owner_password, \
                                       switch_slivers, all_efs)
+    self._log.info(slice_of_rspec) #print the rspec in the log for debugging
+
     #form the slice URN according to http://groups.geni.net/geni/wiki/GeniApiIdentifiers
     slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
     creds = [] #creds are not needed at least for now: to be fixed

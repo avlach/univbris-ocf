@@ -1,5 +1,9 @@
 #author: Vasileios Kotronis
 
+import sys
+import os
+from os.path import expanduser
+
 #prepare imports
 #import the etree module
 from lxml import etree
@@ -202,9 +206,17 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 				k = k + 1
 		i = i+1
 			
-	#print final rspec for debugging purposes
-	print(etree.tostring(rspec,encoding='UTF-8',xml_declaration=True))
+	#store final rspec for debugging purposes
+	string_rspec = etree.tostring(rspec,encoding='UTF-8',xml_declaration=True)  
 	
+# file_dir_path = "~/debug_rspecs_created/"
+#	if not os.path.exists(file_dir_path): 
+#		os.makedirs(file_dir_path)
+#	filename = str(slice_id) + '.rspec' 
+#	f = open(os.path.join(file_dir_path, filename), 'w')
+#	f.write(string_rspec)
+#	f.close()
+
 	#return the rspec as a string
-	return etree.tostring(rspec,encoding='UTF-8',xml_declaration=True)
+	return string_rspec
 	
