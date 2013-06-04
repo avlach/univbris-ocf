@@ -217,6 +217,6 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 #	f.write(string_rspec)
 #	f.close()
 
-	#return the rspec as a string
+	#return rspec as a string
 	return string_rspec
 	
