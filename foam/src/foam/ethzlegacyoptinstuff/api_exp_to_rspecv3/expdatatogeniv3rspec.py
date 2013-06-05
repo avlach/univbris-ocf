@@ -54,7 +54,7 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 	#xmlns = "opt/foam/schemas"
 	xs = "http://www.w3.org/2001/XMLSchema-instance"
 	#openflow = "http://www.geni.net/resources/rspec/ext/openflow/3"
-	openflow = "opt/foam/schemas"	
+	openflow = "/opt/foam/schemas"	
 	#schemaLocation = "http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/request.xsd http://www.geni.net/resources/rspec/ext/openflow/3 http://www.geni.net/resources/rspec/ext/openflow/3/of-resv.xsd"
 	schemaLocation = "http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/request.xsd /opt/foam/schemas /opt/foam/schemas/of-resv-3.xsd"
 	
