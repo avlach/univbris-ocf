@@ -354,15 +354,15 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     @rtype: dict
     '''
     
-    self._actionLog.info("Legacy Expedient API: create_slice got the following:")
-    self._actionLog.info("    slice_id: %s" % slice_id)
-    self._actionLog.info("    project_name: %s" % project_name)
-    self._actionLog.info("    project_desc: %s" % project_description)
-    self._actionLog.info("    slice_name: %s" % slice_name)
-    self._actionLog.info("    slice_desc: %s" % slice_description)
-    self._actionLog.info("    controller: %s" % controller_url)
-    self._actionLog.info("    owner_email: %s" % owner_email)
-    self._actionLog.info("    owner_pass: %s" % owner_password)
+#    self._actionLog.info("Legacy Expedient API: create_slice got the following:")
+#    self._actionLog.info("    slice_id: %s" % slice_id)
+#    self._actionLog.info("    project_name: %s" % project_name)
+#    self._actionLog.info("    project_desc: %s" % project_description)
+#    self._actionLog.info("    slice_name: %s" % slice_name)
+#    self._actionLog.info("    slice_desc: %s" % slice_description)
+#    self._actionLog.info("    controller: %s" % controller_url)
+#    self._actionLog.info("    owner_email: %s" % owner_email)
+#    self._actionLog.info("    owner_pass: %s" % owner_password)
     #self._actionLog.info("    switch_slivers"
     #pprint(switch_slivers, indent=8)
     
@@ -446,7 +446,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     self._log.info(slice_of_rspec) #print the rspec in the log for debugging
 
     #form the slice URN according to http://groups.geni.net/geni/wiki/GeniApiIdentifiers
-    slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
+    slice_urn = "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+slice+" + str(slice_id)
     creds = [] #creds are not needed at least for now: to be fixed
     user_info = {}
     user_info["urn"] = "urn:publicid:IDN+" + "openflow:fp7-ofelia.eu:ocf:ch+" + "user+" + str(owner_email) #temp hack
@@ -463,7 +463,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       try:
         #old_exp_fs.delete()
         #old_e.delete()
-        old_exp_shutdown_success = legexpgapi2_apih.call('Shutdown', slice_urn, creds, [])
+        old_exp_shutdown_success = self.priv_DeleteSliver(slice_urn, creds, [])
       except Exception, e:
         import traceback
         traceback.print_exc()
@@ -472,12 +472,13 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
         raise Exception("Old slice could not be shutdown")
         
     #create new slice
-    created_slice_info = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
+    creation_result = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)
+ 
     #legacy save flowspace
     #for fs in all_efs:
     #  fs.save()     
-    print "Created slice with %s %s %s %s" % (
-          e.get_fv_slice_name(), owner_password, controller_url, owner_email)
+    self._log.info("Created slice with %s %s %s %s" % (
+          e.get_fv_slice_name(), owner_password, controller_url, owner_email))
     #transaction.commit()
     
     return {
@@ -520,7 +521,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     '''
     
     #FOAM deletion
-    slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
+    slice_urn = "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+slice+" + str(slice_id)
     creds = []
     deleted_slice_info = self.priv_DeleteSliver(slice_urn, creds, [])
     
@@ -541,7 +542,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
                                        self.slice_info_dict['slice_id']['switch_slivers'],
                                        self.slice_info_dict['slice_id']['all_efs'])
     self.slice_info_dict['slice_id']['controller_url'] = controller_url
-    slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
+    slice_urn = "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+slice+" + str(slice_id)
     creds = [] #creds are not needed at least for now: to be fixed
     user_info = {}
     user_info["urn"] = "urn:publicid:IDN+" + "openflow:fp7-ofelia.eu:ocf:ch+" + "user+" + str(owner_email) #temp hack
@@ -557,7 +558,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     if old_exp_shutdown_success == False:
       raise Exception("Old slice could not be shutdown")
     #create new slice
-    created_slice_info = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)[value]
+    creation_result = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)
     
     return ""
 
@@ -727,7 +728,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
 #        traceback.print_exc()
 #        raise Exception(parseFVexception(e))
 
-    slice_urn = "urn:publicid:IDN+openflow:fp7-ofelia.eu:ocf:foam+slice+" + str(slice_id)
+    slice_urn = "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+slice+" + str(slice_id)
     if GeniDB.sliceExists(slice_urn):
       sliv_urn = GeniDB.getSliverURN(slice_urn)
     else:
