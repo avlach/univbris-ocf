@@ -166,7 +166,7 @@ def createSliver (slice_urn, credentials, rspec, user_info):
     s = StringIO(rspec)
     rspec_dom = ET.parse(s)
   except Exception, exc:
-    flog.exception("XML parsing error")
+    flog.exception("XML rspec parsing error")
     raise RspecParseError(slice_urn, str(exc))
 
   of3 = open("/opt/foam/schemas/of-resv-3.xsd", "r")
@@ -176,7 +176,7 @@ def createSliver (slice_urn, credentials, rspec, user_info):
   try:
     xs3.assertValid(rspec_dom)
   except etree.DocumentInvalid, e:
-    flog.exception("XML validation error")
+    flog.exception("XML rspec validation error")
     raise RspecValidationError()
 
   rspec_elem = rspec_dom.getroot()
@@ -362,9 +362,12 @@ class GENISliver(foam.flowvisor.FSAllocation):
     return c
 
   def __parseDatav3 (self, dom):
+    flog = logging.getLogger('foam')
     sliver_dom = dom.find('{%s}sliver' % (OFNSv3))  
     if sliver_dom is None:
-      raise NoSliverTag()
+      flog.exception("No Sliver Tag")
+      #raise NoSliverTag()
+      raise Exception()
     self.setEmail(sliver_dom.get("email", None))
     self.setDescription(sliver_dom.get("description", None))
     self.__ref = sliver_dom.get("ref", None)
