@@ -67,7 +67,7 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 	#add controllers to rspec
 	ofcontrollers = []
 	for i in range(3):
-		ofcontrollers.append(etree.SubElement(ofsliver, "{"+openflow+"}conroller"))
+		ofcontrollers.append(etree.SubElement(ofsliver, "{"+openflow+"}controller"))
 	#primary controller
 	ofcontrollers[0].set("url", controller_url)
 	ofcontrollers[0].set("type", "primary")

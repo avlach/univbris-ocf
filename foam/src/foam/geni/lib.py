@@ -156,6 +156,8 @@ def approveSliver (request, logger):
     return jsonify(None, code = 2, msg  = traceback.format_exc())
 
 def createSliver (slice_urn, credentials, rspec, user_info):
+  flog = logging.getLogger('foam')
+
   if GeniDB.sliceExists(slice_urn):
     raise DuplicateSliver(slice_urn)
 
@@ -164,6 +166,7 @@ def createSliver (slice_urn, credentials, rspec, user_info):
     s = StringIO(rspec)
     rspec_dom = ET.parse(s)
   except Exception, exc:
+    flog.exception("XML parsing error")
     raise RspecParseError(slice_urn, str(exc))
 
   of3 = open("/opt/foam/schemas/of-resv-3.xsd", "r")
@@ -173,6 +176,7 @@ def createSliver (slice_urn, credentials, rspec, user_info):
   try:
     xs3.assertValid(rspec_dom)
   except etree.DocumentInvalid, e:
+    flog.exception("XML validation error")
     raise RspecValidationError()
 
   rspec_elem = rspec_dom.getroot()
