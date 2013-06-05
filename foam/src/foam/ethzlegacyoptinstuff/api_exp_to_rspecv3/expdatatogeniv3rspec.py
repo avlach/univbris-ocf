@@ -202,12 +202,12 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 				
 				#assign the proper values to fields
 				ofmatchdppktfsfields.append(etree.SubElement(ofmatchdppackets[i], "{"+openflow+"}"+fieldName))
-				ofmatchdppktfsfields[k].set(fieldName, fieldValue)
+				ofmatchdppktfsfields[k].set("value", fieldValue)
 				k = k + 1
 		i = i+1
 			
 	#store final rspec for debugging purposes
-	string_rspec = etree.tostring(rspec,encoding='UTF-8',xml_declaration=True)  
+	string_rspec = etree.tostring(rspec,encoding='UTF-8',xml_declaration=True, pretty_print=True)  
 	
 # file_dir_path = "~/debug_rspecs_created/"
 #	if not os.path.exists(file_dir_path): 
