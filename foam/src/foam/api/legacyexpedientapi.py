@@ -13,6 +13,9 @@ from django.core.mail import send_mail
 from django.contrib.sites.models import Site
 '''
 
+import os
+import sys
+
 #legacy optin imports
 #from foam.ethzlegacyoptinstuff.legacyoptin.xmlrpcmodels import CallBackServerProxy, FVServerProxy
 from foam.ethzlegacyoptinstuff.legacyoptin.optsmodels import Experiment, ExperimentFLowSpace #,\
@@ -54,6 +57,7 @@ from foam.app import admin_apih #admin is setup beforehand so handler is perfect
 #    extract_IP_mask_from_IP_range
 #from foam.app import legexpgapi2_apih #use legexpgapi2 handler
 from pprint import pprint
+import json
 
 
 def _same(val):
@@ -81,8 +85,15 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   def __init__ (self, log):
     super(AMLegExpAPI, self).__init__("legacyexpedientapi", log)
     self._actionLog = KeyAdapter("expedient", logging.getLogger('legexpapi-actions'))
-    self.slice_info_dict = {} #needed for storing info that can easily be retrieved
-    #without parsing foam rspecs
+    #retriev updated dict as a json file from foam db folder
+    filedir = './opt/foam/db'
+    filename = os.path.join(filedir, 'expedient_slices_info.json')
+    if os.path.isfile(filename):
+      f = open(filename, 'r')
+      self.slice_info_dict = json.load(f)
+      f.close()
+    else:
+      self.slice_info_dict = {}
 
   def recordAction (self, action, credentials = [], urn = None):
     cred_ids = []
@@ -173,9 +184,12 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@decorator
   def pub_check_fv_set(self, func, *arg, **kwargs):
     if (FV.xmlconn is None):
+      self._log.exception("No xlmlrpc connection with Flowvisor detected")
       raise Exception("No xlmlrpc connection with Flowvisor detected")
-    if (FV.jsonconn is None):
-      raise Exception("No jsonrpc connection with FlowVisor detected")
+    #leave json com out for now    
+    #if (FV.jsonconn is None):
+    #  self._log.exception("No jsonrpc connection with FlowVisor detected")
+    #  raise Exception("No jsonrpc connection with FlowVisor detected")
     return func(*arg, **kwargs)
 
   #as is
@@ -215,9 +229,12 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@rpcmethod()
   def pub_checkFlowVisor(self, *arg, **kwargs):
     if (FV.xmlconn is None):
+      self._log.exception("No xlmlrpc connection with Flowvisor detected")
       raise Exception("No xlmlrpc connection with Flowvisor detected")
-    if (FV.jsonconn is None):
-      raise Exception("No jsonrpc connection with FlowVisor detected")
+    #leave json com out for now    
+    #if (FV.jsonconn is None):
+    #  self._log.exception("No jsonrpc connection with FlowVisor detected")
+    #  raise Exception("No jsonrpc connection with FlowVisor detected")
     return ""
 
   #as is
@@ -259,6 +276,43 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     if (direction == 'bidirectional'):
       return 2
     return 2
+  
+  def create_slice_fs(self, switch_slivers):
+    #legacy create slice flowspaces
+    all_efs = [] 
+    for sliver in switch_slivers:
+      if "datapath_id" in sliver:
+        dpid = sliver['datapath_id']
+      else:
+        dpid = "00:" * 8
+        dpid = dpid[:-1]
+          
+      if len(sliver['flowspace'])==0:
+        efs = ExperimentFLowSpace()
+        #efs.exp  = e
+        efs.dpid = dpid
+        efs.direction = 2
+        all_efs.append(efs)
+      else:
+        for sfs in sliver['flowspace']:
+          efs = ExperimentFLowSpace()
+          #efs.exp  = e
+          efs.dpid = dpid
+          if "direction" in sfs:
+              efs.direction = self.get_direction(sfs['direction'])
+          else:
+              efs.direction = 2       
+          fs = self.pub_convert_star(sfs)
+          for attr_name,(to_str, from_str, width, om_name, of_name) in \
+          om_ch_translate.attr_funcs.items():
+              ch_start ="%s_start"%(attr_name)
+              ch_end ="%s_end"%(attr_name)
+              om_start ="%s_s"%(om_name)
+              om_end ="%s_e"%(om_name)
+              setattr(efs,om_start,from_str(fs[ch_start]))
+              setattr(efs,om_end,from_str(fs[ch_end]))
+          all_efs.append(efs)
+    return all_efs
 
   #coded from scratch, to be checked
   #@check_user
@@ -378,64 +432,28 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       update_exp = False  
     '''  
   
-    e = Experiment()
-    e.slice_id = slice_id
-    e.project_name = project_name
-    e.project_desc = project_description
-    e.slice_name = slice_name
-    e.slice_desc = slice_description
-    e.controller_url = controller_url
-    e.owner_email = owner_email
-    e.owner_password = owner_password
-    #e.save()
+#    e = Experiment()
+#    e.slice_id = slice_id
+#    e.project_name = project_name
+#    e.project_desc = project_description
+#    e.slice_name = slice_name
+#    e.slice_desc = slice_description
+#    e.controller_url = controller_url
+#    e.owner_email = owner_email
+#    e.owner_password = owner_password
+#    e.save()
     #update dict info
-    self.slice_info_dict['slice_id'] = {}
-    self.slice_info_dict['slice_id']['slice_id'] = slice_id
-    self.slice_info_dict['slice_id']['project_name'] = project_name
-    self.slice_info_dict['slice_id']['project_desc'] = project_description
-    self.slice_info_dict['slice_id']['slice_name'] = slice_name
-    self.slice_info_dict['slice_id']['slice_desc'] = slice_description
-    self.slice_info_dict['slice_id']['controller_url'] = controller_url
-    self.slice_info_dict['slice_id']['owner_email'] = owner_email
-    self.slice_info_dict['slice_id']['owner_password'] = owner_password
-    self.slice_info_dict['slice_id']['switch_slivers'] = switch_slivers 
-
-    
-    #legacy create slice flowspaces
-    all_efs = [] 
-    for sliver in switch_slivers:
-      if "datapath_id" in sliver:
-        dpid = sliver['datapath_id']
-      else:
-        dpid = "00:" * 8
-        dpid = dpid[:-1]
-          
-      if len(sliver['flowspace'])==0:
-        efs = ExperimentFLowSpace()
-        efs.exp  = e
-        efs.dpid = dpid
-        efs.direction = 2
-        all_efs.append(efs)
-      else:
-        for sfs in sliver['flowspace']:
-          efs = ExperimentFLowSpace()
-          efs.exp  = e
-          efs.dpid = dpid
-          if "direction" in sfs:
-              efs.direction = self.get_direction(sfs['direction'])
-          else:
-              efs.direction = 2       
-          fs = self.pub_convert_star(sfs)
-          for attr_name,(to_str, from_str, width, om_name, of_name) in \
-          om_ch_translate.attr_funcs.items():
-              ch_start ="%s_start"%(attr_name)
-              ch_end ="%s_end"%(attr_name)
-              om_start ="%s_s"%(om_name)
-              om_end ="%s_e"%(om_name)
-              setattr(efs,om_start,from_str(fs[ch_start]))
-              setattr(efs,om_end,from_str(fs[ch_end]))
-          all_efs.append(efs)
-    self.slice_info_dict['slice_id']['all_efs'] = all_efs
+    self.slice_info_dict[slice_id] = {}
+    self.slice_info_dict[slice_id]['project_name'] = project_name
+    self.slice_info_dict[slice_id]['project_desc'] = project_description
+    self.slice_info_dict[slice_id]['slice_name'] = slice_name
+    self.slice_info_dict[slice_id]['slice_desc'] = slice_description
+    self.slice_info_dict[slice_id]['controller_url'] = controller_url
+    self.slice_info_dict[slice_id]['owner_email'] = owner_email
+    self.slice_info_dict[slice_id]['owner_password'] = owner_password
+    self.slice_info_dict[slice_id]['switch_slivers'] = switch_slivers 
+   
+    all_efs = self.create_slice_fs(switch_slivers)
     
     #set the necessary parameters so that we can use FOAM internal functions for sliver creation
     #Vasileios: now that the requested flowspaces are identified, create the rspec (to be used in FOAM)
@@ -477,9 +495,16 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     #legacy save flowspace
     #for fs in all_efs:
     #  fs.save()     
-    self._log.info("Created slice with %s %s %s %s" % (
-          e.get_fv_slice_name(), owner_password, controller_url, owner_email))
+    #self._log.info("Created slice with %s %s %s %s" % (
+    #      e.get_fv_slice_name(), owner_password, controller_url, owner_email))
     #transaction.commit()
+    
+    #store updated dict as a json file in foam db folder
+    filedir = './opt/foam/db'
+    filename = os.path.join(filedir, 'expedient_slices_info.json')
+    f = open(filename, 'w')
+    json.dump(self.slice_info_dict, f)
+    f.close()
     
     return {
           'error_msg': "",
@@ -524,6 +549,14 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     slice_urn = "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+slice+" + str(slice_id)
     creds = []
     deleted_slice_info = self.priv_DeleteSliver(slice_urn, creds, [])
+    del self.slice_info_dict[slice_id]
+
+    #store updated dict as a json file in foam db folder
+    filedir = './opt/foam/db'
+    filename = os.path.join(filedir, 'expedient_slices_info.json')
+    f = open(filename, 'w')
+    json.dump(self.slice_info_dict, f)
+    f.close()
     
     return ""
   
@@ -533,15 +566,17 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     '''
     Changes the slice controller url.
     '''
-    slice_of_rspec = create_ofv3_rspec(slice_id, self.slice_info_dict['slice_id']['project_name'], 
-                                       self.slice_info_dict['slice_id']['project_desc'],
-                                       self.slice_info_dict['slice_id']['slice_name'],
-                                       self.slice_info_dict['slice_id']['slice_desc'], controller_url,
-                                       self.slice_info_dict['slice_id']['owner_email'],
-                                       self.slice_info_dict['slice_id']['owner_password'],
-                                       self.slice_info_dict['slice_id']['switch_slivers'],
-                                       self.slice_info_dict['slice_id']['all_efs'])
-    self.slice_info_dict['slice_id']['controller_url'] = controller_url
+    if slice_id not in self.slice_info_dict:
+      raise Exception("Something went wrong with the fs recovery")
+    slice_of_rspec = create_ofv3_rspec(slice_id, self.slice_info_dict[slice_id]['project_name'], 
+                                       self.slice_info_dict[slice_id]['project_desc'],
+                                       self.slice_info_dict[slice_id]['slice_name'],
+                                       self.slice_info_dict[slice_id]['slice_desc'], controller_url,
+                                       self.slice_info_dict[slice_id]['owner_email'],
+                                       self.slice_info_dict[slice_id]['owner_password'],
+                                       self.slice_info_dict[slice_id]['switch_slivers'],
+                                       self.create_slice_fs(self.slice_info_dict[slice_id]['switch_slivers']))
+    self.slice_info_dict[slice_id]['controller_url'] = controller_url
     slice_urn = "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+slice+" + str(slice_id)
     creds = [] #creds are not needed at least for now: to be fixed
     user_info = {}
@@ -559,6 +594,13 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       raise Exception("Old slice could not be shutdown")
     #create new slice
     creation_result = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)
+
+    #store updated dict as a json file in foam db folder
+    filedir = './opt/foam/db'
+    filename = os.path.join(filedir, 'expedient_slices_info.json')
+    f = open(filename, 'w')
+    json.dump(self.slice_info_dict, f)
+    f.close()
     
     return ""
 
@@ -740,7 +782,9 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       #that means that the flow space as requested was allocated
       #so retrieve the fs in the form Expedient understands
       #TODO: check that ecery time this corresponds to the actual flowspec that FOAM has
-      all_efs = self.slice_info_dict['slice_id']['all_efs']  
+      if slice_id not in self.slice_info_dict:
+        raise Exception("Something went wrong with the fs recovery")
+      all_efs = self.create_slice_fs(self.slice_info_dict[slice_id]['switch_slivers']) 
       gfs = []    
       try:      
         gfs = parse_granted_flowspaces(all_efs)

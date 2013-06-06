@@ -5,7 +5,7 @@
 import logging
 import uuid
 
-from foamext.IPy import IP
+from foamext.IPy import IP, _prefixlenToNetmask
 from foam.geni.db import GeniDB
 from foam.core.exception import CoreException
 from foam.core.log import KeyAdapter
@@ -173,10 +173,9 @@ class of_ApprovalData(object):
 					
 				#build IP address tree from pool of IP subnets (first make them intervals)
 				for IPSub in fs.getIPSubnets():
-					IPsubparsed = self.parseSubnet(IPSub)
+					IPSubparsed = self.parseSubnet(IPSub)
 					IPSubLen = IP(IPSubparsed).len()
-					[IPnetstr, NMstr] = IPSubparsed.split("/")
-					IPstart = IP(IPnetstr).strDec()
+					IPstart = int(IP(IPSubparsed[0]).strDec())
 					IPstop = IPstart + IPSubLen - 1
 					IPSubnetTree.addIVal(IPSubnetTree.root, IPstart, IPstop, sliv.getURN())
 				
@@ -279,7 +278,7 @@ class of_ApprovalData(object):
 	def parseSubnet (self, netstr):
 		(i,pl) = netstr.split("/")
 		net = IP(i)
-		nm = IP(IPy._prefixlenToNetmask(int(pl), 4))
+		nm = IP(_prefixlenToNetmask(int(pl), 4))
 		net.make_net(nm)
 		return net
 	
@@ -348,8 +347,7 @@ class of_ApprovalData(object):
 				covered = True
 				IPsubparsed = self.parseSubnet(IPSub)
 				IPSubLen = IP(IPSubparsed).len()
-				[IPnetstr, NMstr] = IPSubparsed.split("/")
-				IPstart = IP(IPnetstr).strDec()
+				IPstart = int(IP(IPSubparsed[0]).strDec())
 				IPstop = IPstart + IPSubLen - 1
 				ovList = self._subnetivtree.findOverlapIVal(self._subnetivtree.root, IPstart, IPstop, [])
 				if ovList != []:
@@ -450,8 +448,7 @@ class of_ApprovalData(object):
 				for IPSub in fs.getIPSubnets():
 					IPsubparsed = self.parseSubnet(IPSub)
 					IPSubLen = IP(IPSubparsed).len()
-					[IPnetstr, NMstr] = IPSubparsed.split("/")
-					IPstart = IP(IPnetstr).strDec()
+					IPstart = int(IP(IPSubparsed[0]).strDec())
 					IPstop = IPstart + IPSubLen - 1
 					self._subnetivtree.addIVal(self._subnetivtree.root, IPstart, IPstop, sliver.getURN())
 					
