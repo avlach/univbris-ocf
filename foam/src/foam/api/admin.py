@@ -477,13 +477,17 @@ class AdminAPIv1(Dispatcher):
 
   #Vasileios: adapt vlanController.offer_vlan_tags method
   @route('/core/admin/offer-vlan-tags', methods=["POST", "GET"])
-  def adminOfferVlanTags(self, set=None): #use_json = True
-    if not request.json:
-      return
+  def adminOfferVlanTags(self, set=None, use_json = True):
+    if use_json == True:
+      if not request.json:
+        return
     try:
-      self.validate(request.json, [("vlan_set", (int))])
-      vlan_set = request.json["vlan_set"]
-      if set is None: #use json arg     
+      if use_json == True:
+        self.validate(request.json, [("vlan_set", (int))])
+        vlan_set = request.json["vlan_set"]
+      else:
+        vlan_set = 0
+      if use_json == True: #use json arg     
         if vlan_set == 0:
           returnval = [x for x in range(1,4095) if x not in self.adminListAllocatedVlans(False) and x not in ofvlset.UNALLOWED_VLANS]
         elif vlan_set in range(1,4095):
@@ -496,10 +500,10 @@ class AdminAPIv1(Dispatcher):
         else:
           returnval = None
 
-      #if (use_json == True):
-      return jsonify({"offered-vlan-tags" : returnval})
-      #else:
-      #  return returnval
+      if (use_json == True):
+        return jsonify({"offered-vlan-tags" : returnval})
+      else:
+        return returnval
 		
     except JSONValidationError, e:
       jd = e.__json__()

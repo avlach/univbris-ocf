@@ -802,7 +802,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_fv_set
   #@rpcmethod()
   def pub_get_offered_vlans(self, set=None):
-    return admin_apih.adminOfferVlanTags(set)
+    return admin_apih.adminOfferVlanTags(set, False)
 
   def pub_test_api_access(self, sayHello):
     if sayHello == 1:
