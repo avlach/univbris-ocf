@@ -101,7 +101,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     for cred in credentials:
       self._actionLog.info("Credential: %s" % (cred))
 
-  def priv_CreateSliver(self, slice_urn, credentials, rspec, users, options=None):	
+  def priv_CreateSliver(self, slice_urn, credentials, rspec, users, force_approval=False, options=None):	
     #user_info = {}
     user_info = users
     try:
@@ -112,7 +112,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
           #cert = Certificate(request.environ['CLIENT_RAW_CERT'])
           #user_info["urn"] = cert.getURN()
           #user_info["email"] = cert.getEmailAddress()
-          self._log.debug("Parsed user cert with URN (%(urn)s) and email (%(email)s)" % user_info)
+          self._log.debug("Parsed user cert with URN (%(urn)s) and email (%(email)s)" % users)
         except Exception, e:
           self._log.exception("UNFILTERED EXCEPTION")
           user_info["urn"] = None
@@ -125,7 +125,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
           approve = True
         else:
           approve = foam.geni.ofeliaapproval.of_analyzeForApproval(sliver)
-        if approve:
+        if approve or force_approval:
           pid = foam.task.approveSliver(sliver.getURN(), AUTO_SLIVER_PRIORITY)
           self._log.debug("task.py launched for approve-sliver (PID: %d)" % pid)	
         data = GeniDB.getSliverData(sliver.getURN(), True)
@@ -592,8 +592,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       raise Exception("Exception while trying to shutdown old slice!")
     if old_exp_shutdown_success == False:
       raise Exception("Old slice could not be shutdown")
-    #create new slice
-    creation_result = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)
+    #create new slice and automatically approve (only controller changes)
+    creation_result = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info, True, None)
 
     #store updated dict as a json file in foam db folder
     filedir = './opt/foam/db'
