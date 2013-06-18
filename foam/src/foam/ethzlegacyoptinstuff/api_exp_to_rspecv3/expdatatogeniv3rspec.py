@@ -63,7 +63,7 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 	
 	#add openflow sliver to rspec
 	ofsliver = etree.SubElement(rspec, "{"+openflow+"}sliver")
-	ofsliver.set("description", project_description)
+	ofsliver.set("description", "project:" + project_description + "|slice:" + slice_description)
 	ofsliver.set("email", owner_email)
 	ofsliver.set("ref", "sample experiment reference")
 	
