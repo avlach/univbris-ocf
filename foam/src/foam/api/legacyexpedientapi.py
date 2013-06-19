@@ -567,7 +567,9 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     Changes the slice controller url.
     '''
     if slice_id not in self.slice_info_dict:
-      raise Exception("Something went wrong with the fs recovery")
+      self._log.info("Slice is probably not started yet, doing nothing...")
+      return ""
+      #raise Exception("Something went wrong with the fs recovery")
     slice_of_rspec = create_ofv3_rspec(slice_id, self.slice_info_dict[slice_id]['project_name'], 
                                        self.slice_info_dict[slice_id]['project_desc'],
                                        self.slice_info_dict[slice_id]['slice_name'],
@@ -580,9 +582,15 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     slice_urn = "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+slice+" + str(slice_id)
     creds = [] #creds are not needed at least for now: to be fixed
     user_info = {}
-    user_info["urn"] = "urn:publicid:IDN+" + "openflow:fp7-ofelia.eu:ocf:ch+" + "user+" + str(owner_email) #temp hack
-    user_info["email"] = str(owner_email)
-    #updating the slice in FV
+    user_info["urn"] = "urn:publicid:IDN+" + "openflow:fp7-ofelia.eu:ocf:ch+" + "user+" + str(self.slice_info_dict[slice_id]['owner_email']) #temp hack
+    user_info["email"] = str(self.slice_info_dict[slice_id]['owner_email'])
+    if GeniDB.sliceExists(slice_urn):
+      sliv_urn = GeniDB.getSliverURN(slice_urn)
+    else:
+      raise Exception("Something went wrong with the fs recovery, slice does not exist!")
+    sliver = GeniDB.getSliverObj(sliv_urn) 
+    is_allocated_by_FV = GeniDB.getEnabled(sliv_urn)
+    was_allocated_by_FV = is_allocated_by_FV
     try:
       #old_exp_shutdown_success = legexpgapi2_apih.pub_Shutdown(slice_urn, creds, [])
       old_exp_shutdown_success = self.priv_DeleteSliver(slice_urn, creds, [])
@@ -592,8 +600,11 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       raise Exception("Exception while trying to shutdown old slice!")
     if old_exp_shutdown_success == False:
       raise Exception("Old slice could not be shutdown")
-    #create new slice and automatically approve (only controller changes)
-    creation_result = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info, True, None)
+    if was_allocated_by_FV == True:
+      #create new slice and automatically approve since already approved (only controller changes)
+      creation_result = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info, True, None)
+    else:
+      creation_result = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info, False, None)
 
     #store updated dict as a json file in foam db folder
     filedir = './opt/foam/db'
