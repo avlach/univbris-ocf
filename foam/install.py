@@ -74,11 +74,15 @@ def install_foam ():
   addDir("/opt/foam/etc/templates/custom", "root")
 
 def install_deps ():
+  #res = call("pip --version")
+  #ver = res.split()[1]
+  #if ver != "1.0.2":
+  #  call("pip install -U pip")
+  call("apt-get --yes install python-pip nginx xmlsec1 python-dateutil m2crypto python-dev ssl-cert libxml2-dev libxslt1-dev libssl-dev")
   res = call("pip --version")
   ver = res.split()[1]
   if ver != "1.0.2":
     call("pip install -U pip")
-  call("apt-get --yes install python-pip nginx xmlsec1 python-dateutil m2crypto python-dev ssl-cert libxml2-dev libxslt1-dev libssl-dev")
   call("pip -q install sqlalchemy Flask Flask-XML-RPC ElementTree flup blinker lxml pyOpenSSL")
 
 def postinst (opts):
