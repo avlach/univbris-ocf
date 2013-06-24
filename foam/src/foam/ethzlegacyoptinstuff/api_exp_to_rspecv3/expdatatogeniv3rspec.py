@@ -90,14 +90,21 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 	ofdpports = dict()
 	
 	for experimentflowspace in experimentflowspaces:
+		if (experimentflowspace.dpid is None):
+			raise Exception("No dpid is specified for this flowspace!")
 		#check if we have already registered the datapath
 		if (experimentflowspace.dpid in ofdpids) is False:
 			ofdpids.append(experimentflowspace.dpid)
 			ofdpports[experimentflowspace.dpid] = []
 		#now we can associate the ports with the datapath
-		for port_number in range(experimentflowspace.port_number_s, experimentflowspace.port_number_e):
-			ofdpports[experimentflowspace.dpid].append(port_number)
-		ofdpports[experimentflowspace.dpid].append(experimentflowspace.port_number_e) #because range ignores end number
+		if (experimentflowspace.port_number_s is None):
+			raise Exception("No port on a dpid is specified for this flowspace!")
+		if (experimentflowspace.port_number_e is not None):
+			for port_number in xrange(experimentflowspace.port_number_s, experimentflowspace.port_number_e):
+				ofdpports[experimentflowspace.dpid].append(port_number)
+			ofdpports[experimentflowspace.dpid].append(experimentflowspace.port_number_e) #because range ignores end number
+		else:
+			ofdpports[experimentflowspace.dpid].append(experimentflowspace.port_number_s)
 	
 	#add datapaths and ports to rspec	
 	ofgroupdatapaths = []
@@ -134,13 +141,17 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 		ofmatchdatapaths[i].set("component_id", "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+datapath+"+str(experimentflowspace.dpid))
 		ofmatchdatapaths[i].set("component_manager_id", "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+authority+am")
 		ofmatchdatapaths[i].set("dpid", str(experimentflowspace.dpid))
-		for port_number in range(experimentflowspace.port_number_s, experimentflowspace.port_number_e):
+		if (experimentflowspace.port_number_e is not None):
+			for port_number in xrange(experimentflowspace.port_number_s, experimentflowspace.port_number_e):
+				ofmatchdpports.append(etree.SubElement(ofmatchdatapaths[i], "{"+openflow+"}port"))
+				ofmatchdpports[j].set("num", port_number)
+				j=j+1
 			ofmatchdpports.append(etree.SubElement(ofmatchdatapaths[i], "{"+openflow+"}port"))
-			ofmatchdpports[j].set("num", port_number)
+			ofmatchdpports[j].set("num", str(experimentflowspace.port_number_e))
 			j=j+1
-		ofmatchdpports.append(etree.SubElement(ofmatchdatapaths[i], "{"+openflow+"}port"))
-		ofmatchdpports[j].set("num", str(experimentflowspace.port_number_e))
-		j=j+1
+		else:
+			ofmatchdpports.append(etree.SubElement(ofmatchdatapaths[i], "{"+openflow+"}port"))
+			ofmatchdpports[j].set("num", str(experimentflowspace.port_number_s))
 		
 		#match packet (flowspace)
 		ofmatchdppackets.append(etree.SubElement(ofmatch[i], "{"+openflow+"}packet"))

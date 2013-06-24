@@ -702,6 +702,9 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_user
   #@rpcmethod(signature=['string', 'string'])
   def pub_ping(self, data, **kwargs):
+    if (FV.xmlconn is None):
+      self._log.exception("No xlmlrpc connection with Flowvisor detected")
+      raise Exception("No xlmlrpc connection with Flowvisor detected")
     try:
       FV.log.debug("XMLRPC:ping (%s)" % (str(data)))
       return FV.xmlcall("ping", " " + str(data)) #this will return a PONG is everything alright
