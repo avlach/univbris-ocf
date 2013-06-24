@@ -144,7 +144,7 @@ def create_ofv3_rspec(slice_id, project_name, project_description,
 		if (experimentflowspace.port_number_e is not None):
 			for port_number in xrange(experimentflowspace.port_number_s, experimentflowspace.port_number_e):
 				ofmatchdpports.append(etree.SubElement(ofmatchdatapaths[i], "{"+openflow+"}port"))
-				ofmatchdpports[j].set("num", port_number)
+				ofmatchdpports[j].set("num", str(port_number))
 				j=j+1
 			ofmatchdpports.append(etree.SubElement(ofmatchdatapaths[i], "{"+openflow+"}port"))
 			ofmatchdpports[j].set("num", str(experimentflowspace.port_number_e))

@@ -806,6 +806,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
         import traceback
         traceback.print_exc()
         raise Exception(parseFVexception(e))
+      self._log.info("FlowSpace for the allocated slice is returned")
       return gfs
     else:
       return [] 
