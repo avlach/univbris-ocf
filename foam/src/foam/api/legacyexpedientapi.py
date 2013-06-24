@@ -724,46 +724,47 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     def parse_granted_flowspaces(gfs):
       gfs_list=[] 
       for fs in gfs:
-          fs_dict = dict(
-              flowspace=dict(),
-              openflow=dict()
-          )
-          fs_dict['openflow']=[]
-          fs_dict['flowspace']=dict(
-                                   mac_src_s=int_to_mac(fs.mac_src_s),
-                                   mac_src_e=int_to_mac(fs.mac_src_e),
-                                   mac_dst_s=int_to_mac(fs.mac_dst_s),
-                                   mac_dst_e=int_to_mac(fs.mac_dst_e),
-                                   eth_type_s=fs.eth_type_s,
-                                   eth_type_e=fs.eth_type_e,
-                                   vlan_id_s=fs.vlan_id_s,
-                                   vlan_id_e=fs.vlan_id_e,
-                                   ip_src_s=int_to_dotted_ip(fs.ip_src_s),
-                                   ip_dst_s=int_to_dotted_ip(fs.ip_dst_s),
-                                   ip_src_e=int_to_dotted_ip(fs.ip_src_e),
-                                   ip_dst_e=int_to_dotted_ip(fs.ip_dst_e),
-                                   ip_proto_s=fs.ip_proto_s,
-                                   ip_proto_e=fs.ip_proto_e,
-                                   tp_src_s=fs.tp_src_s,
-                                   tp_dst_s=fs.tp_dst_s,
-                                   tp_src_e=fs.tp_src_e,
-                                   tp_dst_e=fs.tp_dst_e,
-                               )
-          openflow_dict=dict(
-                                  dpid=fs.dpid, 
-                                  direction=fs.direction, 
-                                  port_number_s=fs.port_number_s, 
-                                  port_number_e=fs.port_number_e, 
+        fs_dict = dict(
+            flowspace=dict(),
+            openflow=dict()
+        )
+        fs_dict['openflow']=[]
+        fs_dict['flowspace']=dict(
+                                 mac_src_s=int_to_mac(fs.mac_src_s),
+                                 mac_src_e=int_to_mac(fs.mac_src_e),
+                                 mac_dst_s=int_to_mac(fs.mac_dst_s),
+                                 mac_dst_e=int_to_mac(fs.mac_dst_e),
+                                 eth_type_s=str(fs.eth_type_s),
+                                 eth_type_e=str(fs.eth_type_e),
+                                 vlan_id_s=str(fs.vlan_id_s),
+                                 vlan_id_e=str(fs.vlan_id_e),
+                                 ip_src_s=int_to_dotted_ip(fs.ip_src_s),
+                                 ip_dst_s=int_to_dotted_ip(fs.ip_dst_s),
+                                 ip_src_e=int_to_dotted_ip(fs.ip_src_e),
+                                 ip_dst_e=int_to_dotted_ip(fs.ip_dst_e),
+                                 ip_proto_s=str(fs.ip_proto_s),
+                                 ip_proto_e=str(fs.ip_proto_e),
+                                 tp_src_s=str(fs.tp_src_s),
+                                 tp_dst_s=str(fs.tp_dst_s),
+                                 tp_src_e=str(fs.tp_src_e),
+                                 tp_dst_e=str(fs.tp_dst_e),
                              )
-          existing_fs = False
-          for prev_dict in gfs_list:
-              if fs_dict['flowspace'] == prev_dict['flowspace']:
-                  prev_dict['openflow'].append(openflow_dict)
-                  existing_fs = True
-                  break
-          if not existing_fs:
-              fs_dict['openflow'].append(openflow_dict) 
-              gfs_list.append(fs_dict)
+        openflow_dict=dict(
+                                dpid=str(fs.dpid), 
+                                direction=fs.direction, 
+                                port_number_s=str(fs.port_number_s), 
+                                port_number_e=str(fs.port_number_e), 
+                           )
+        existing_fs = False
+        for prev_dict in gfs_list:
+          if fs_dict['flowspace'] == prev_dict['flowspace']:
+            if openflow_dict not in prev_dict['openflow']:
+              prev_dict['openflow'].append(openflow_dict)
+            existing_fs = True
+            break
+        if not existing_fs:
+          fs_dict['openflow'].append(openflow_dict) 
+          gfs_list.append(fs_dict)
       
       return gfs_list
 
@@ -800,13 +801,19 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
         raise Exception("Something went wrong with the fs recovery")
       all_efs = self.create_slice_fs(self.slice_info_dict[slice_id]['switch_slivers']) 
       gfs = []    
-      try:      
+      try:    
         gfs = parse_granted_flowspaces(all_efs)
       except Exception,e:
         import traceback
         traceback.print_exc()
+        self._log.exception("FlowSpace for the allocated slice is not returned")
         raise Exception(parseFVexception(e))
-      self._log.info("FlowSpace for the allocated slice is returned")
+      self._log.info("FlowSpace for the allocated slice is returned:")
+      for fs in gfs:
+        self._log.info(fs['flowspace'])
+        self._log.info(fs['openflow'])
+      if gfs == []:
+        self._log.info("Empty FlowSpace for the allocated slice returned! Need to debug...")
       return gfs
     else:
       return [] 
