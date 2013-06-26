@@ -6,7 +6,7 @@ TBA
 
 
 ==============
-INSTALLING OCF
+INSTALLING FOAM
 ==============
 
 1. Requirements
@@ -20,17 +20,19 @@ Note: for none Debian-like OSs you will have to manually install components sinc
 OCF ofver-based [http://code.google.com/p/pypelib/] installation scripts only
 support Debian-like OSs currently.
 
+cd ./foam --> check info inside
+
 
 2. Installation of FOAM
 ---------------------------------------------------
 
-TBA
+https://github.com/fp7-ofelia/ocf/wiki/ofam-configuration (second part of webpage)
 
 
 3. Upgrade instructions
 -----------------------
 
-TBA
+https://github.com/fp7-ofelia/ocf/wiki/ofam-configuration (second part of webpage)
 
 
 4. Additional notes
@@ -44,5 +46,5 @@ FURTHER READING
 ===============
 
 For more information about configuration, troubleshooting, contribution and
-more please visit TBA
+more please visit: https://github.com/fp7-ofelia/ocf/wiki/ofam-configuration
 
