@@ -725,13 +725,13 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     authheader =  "Basic %s" % base64string # this encodes the username/password for basic HTTP authentication according to HTTP standar
     headers={"Authorization": authheader}
     # now the URL of the XML RPC  is split up in two parts, as httplib requires them to be fed separately
-    firstIndex=argument.url.find("//")
-    lastIndex=argument.url.find("/",firstIndex+3,len(argument.url))
+    firstIndex=self.callback_http_attrs['url'].find("//")
+    lastIndex=self.callback_http_attrs['url'].find("/",firstIndex+3,len(self.callback_http_attrs['url']))
     if lastIndex==-1:
-      lastIndex=len(argument.url)	
-    clearingHouseURL1=argument.url[firstIndex+2:lastIndex]
-    if lastIndex+1 < len(argument.url):
-      clearingHouseURL2="/"+argument.url[lastIndex+1:len(argument.url)]
+      lastIndex=len(self.callback_http_attrs['url'])	
+    clearingHouseURL1=self.callback_http_attrs['url'][firstIndex+2:lastIndex]
+    if lastIndex+1 < len(self.callback_http_attrs['url']):
+      clearingHouseURL2="/"+self.callback_http_attrs['url'][lastIndex+1:len(self.callback_http_attrs['url'])]
     else:
       clearingHouseURL2="";
     connectionToClearingHouse= httplib.HTTPSConnection(clearingHouseURL1)
