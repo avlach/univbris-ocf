@@ -79,31 +79,31 @@ class om_ch_translate(object):
     "port_num": (_same, int, 16, "port_number","in_port"),
     }
 
-from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import *
-
 import threading
+import time
+
 class RepeatTimer(threading.Thread):
-  def __init__(self, interval, callable, *args, **kwargs):
+  def __init__(self, interval, callable_fun, *args, **kwargs):
     threading.Thread.__init__(self)
     self.interval = interval
-    self.callable = callable
+    self.callable_fun = callable_fun
     self.args = args
     self.kwargs = kwargs
     self.event = threading.Event()
-    self.event.set()
 
   def run(self):
-    while self.event.is_set():
-        t = threading.Timer(self.interval, self.callable,
-                            self.args, self.kwargs)
-        t.start()
-        sleep(self.interval+1)
-        t.stop()
-        #t.join()
+    while not self.event.is_set():
+      #t = threading.Timer(self.interval, self.callable, self.args, self.kwargs)
+      #t.start()
+      self.callable_fun(self.args, self.kwargs)
+      self.event.wait(self.interval)
+      #t.cancel()
+      #t.join()
 
   def cancel(self):
-    self.event.clear()
+    self.event.set()
 
+from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import *
 
 class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   def __init__ (self, log):
@@ -118,9 +118,16 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       f.close()
     else:
       self.slice_info_dict = {}
-    self.switch_list = self.pub_get_switches()
+    switches = self.pub_get_switches()
+    if switches != []:
+      switch_dpids_unzipped, infos = zip(*self.pub_get_switches())
+      self.switch_dpid_list = list(switch_dpids_unzipped)
+    else:
+      self.switch_dpid_list = []
     self.link_list = self.pub_get_links()
-    #self.topo_callback_timer = RepeatTimer(20.0, self.check_topo_change)
+    #self.topo_callback_timer = RepeatTimer(20, self.check_topo_change)
+    #self.topo_callback_timer.start()
+    #self._log.info("Recurring timer for topology callback started!")
     
   def recordAction (self, action, credentials = [], urn = None):
     cred_ids = []
@@ -687,15 +694,24 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     return complete_list
   
   def check_topo_change(self):
-    self._log.info("Timer fired!")
-    updated_switch_list = self.pub_get_switches()
-    updated_link_list = self.pub_get_links()
-    if (set(updated_switch_list) != set(self.switch_list)): 
-      self._log.info("Topology has changed because one or more switches has(have) joined or withdrawn!")
-    if (set(updated_link_list) != set(self.link_list)):
-      self._log.info("Topology has changed because one or more links is(are) up or down!")
-    self.switch_list = updated_switch_list
-    self.link_list = updated_link_list
+    #self._log.info("Topo check fired!")
+    try:
+      if self.pub_get_switches() != []:
+        updated_switch_dpids_unzipped, infos = zip(*self.pub_get_switches())
+        updated_switch_dpid_list = list(updated_switch_dpids_unzipped)
+      else:
+        updated_switch_dpid_list = []
+      updated_link_list = self.pub_get_links()
+      if (set(updated_switch_dpid_list) != set(self.switch_dpid_list)): 
+        self._log.info("Topology has changed because one or more switches has(have) joined or withdrawn!")    
+      if (updated_link_list != self.link_list):
+        self._log.info("Topology has changed because one or more links is(are) up or down!")
+      self.switch_dpid_list = updated_switch_dpid_list
+      self.link_list = updated_link_list
+    except Exception, e:
+      import traceback
+      traceback.print_exc()
+      raise e
   
   #to be coded-----------------------------------------------------------------------  
   #@check_user
@@ -743,7 +759,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     if (FV.xmlconn is None):
       self._log.exception("No xlmlrpc connection with Flowvisor detected")
       raise Exception("No xlmlrpc connection with Flowvisor detected")
-    try:
+    self.check_topo_change() #repeat on ping
+    try:   
       FV.log.debug("XMLRPC:ping (%s)" % (str(data)))
       return FV.xmlcall("ping", " " + str(data)) #this will return a PONG is everything alright
     except Exception, e:
