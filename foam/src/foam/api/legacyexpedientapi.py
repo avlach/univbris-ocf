@@ -81,11 +81,35 @@ class om_ch_translate(object):
 
 from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import *
 
+import threading
+class RepeatTimer(threading.Thread):
+  def __init__(self, interval, callable, *args, **kwargs):
+    threading.Thread.__init__(self)
+    self.interval = interval
+    self.callable = callable
+    self.args = args
+    self.kwargs = kwargs
+    self.event = threading.Event()
+    self.event.set()
+
+  def run(self):
+    while self.event.is_set():
+        t = threading.Timer(self.interval, self.callable,
+                            self.args, self.kwargs)
+        t.start()
+        sleep(self.interval+1)
+        t.stop()
+        #t.join()
+
+  def cancel(self):
+    self.event.clear()
+
+
 class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   def __init__ (self, log):
     super(AMLegExpAPI, self).__init__("legacyexpedientapi", log)
     self._actionLog = KeyAdapter("expedient", logging.getLogger('legexpapi-actions'))
-    #retriev updated dict as a json file from foam db folder
+    #retrieve updated dict as a json file from foam db folder
     filedir = './opt/foam/db'
     filename = os.path.join(filedir, 'expedient_slices_info.json')
     if os.path.isfile(filename):
@@ -94,7 +118,10 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       f.close()
     else:
       self.slice_info_dict = {}
-
+    self.switch_list = self.pub_get_switches()
+    self.link_list = self.pub_get_links()
+    #self.topo_callback_timer = RepeatTimer(20.0, self.check_topo_change)
+    
   def recordAction (self, action, credentials = [], urn = None):
     cred_ids = []
     self._actionLog.info("Sliver: %s  LegExpAPI Action: %s" % (urn, action))
@@ -658,7 +685,18 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       raise e 
     complete_list.extend(links) 
     return complete_list
-
+  
+  def check_topo_change(self):
+    self._log.info("Timer fired!")
+    updated_switch_list = self.pub_get_switches()
+    updated_link_list = self.pub_get_links()
+    if (set(updated_switch_list) != set(self.switch_list)): 
+      self._log.info("Topology has changed because one or more switches has(have) joined or withdrawn!")
+    if (set(updated_link_list) != set(self.link_list)):
+      self._log.info("Topology has changed because one or more links is(are) up or down!")
+    self.switch_list = updated_switch_list
+    self.link_list = updated_link_list
+  
   #to be coded-----------------------------------------------------------------------  
   #@check_user
   #@rpcmethod(signature=['string', 'string', 'string'])
