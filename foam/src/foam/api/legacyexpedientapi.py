@@ -58,6 +58,7 @@ from foam.app import admin_apih #admin is setup beforehand so handler is perfect
 #from foam.app import legexpgapi2_apih #use legexpgapi2 handler
 from pprint import pprint
 import json
+import httplib,urllib,base64
 
 
 def _same(val):
@@ -125,9 +126,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     else:
       self.switch_dpid_list = []
     self.link_list = self.pub_get_links()
-    #self.topo_callback_timer = RepeatTimer(20, self.check_topo_change)
-    #self.topo_callback_timer.start()
-    #self._log.info("Recurring timer for topology callback started!")
+    self.callback_http_attrs = None
+    self.callback_cred_attrs = None
     
   def recordAction (self, action, credentials = [], urn = None):
     cred_ids = []
@@ -703,7 +703,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
         updated_switch_dpid_list = []
       updated_link_list = self.pub_get_links()
       if (set(updated_switch_dpid_list) != set(self.switch_dpid_list)): 
-        self._log.info("Topology has changed because one or more switches has(have) joined or withdrawn!")    
+        self._log.info("Topology has changed because one or more switches has(have) joined or withdrawn!") 
+        self.topology_changed_alert_expedient()   
       if (updated_link_list != self.link_list):
         self._log.info("Topology has changed because one or more links is(are) up or down!")
       self.switch_dpid_list = updated_switch_dpid_list
@@ -713,22 +714,49 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       traceback.print_exc()
       raise e
   
-  #to be coded-----------------------------------------------------------------------  
+  def topology_changed_alert_expedient(self):
+    if self.callback_cred_attrs is None:
+      self._log.info("Credential info missing from expedient callback!")
+      return ""
+    username = self.callback_cred_attrs['username']
+    password = self.callback_cred_attrs['password']
+    body="<?xml version=\"1.0\"?> <methodCall> <methodName>topology_changed</methodName> <params><param><int>"+str(self.callback_http_attrs['cookie'])+"</int></param></params> </methodCall>"
+    base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
+    authheader =  "Basic %s" % base64string # this encodes the username/password for basic HTTP authentication according to HTTP standar
+    headers={"Authorization": authheader}
+    # now the URL of the XML RPC  is split up in two parts, as httplib requires them to be fed separately
+    firstIndex=argument.url.find("//")
+    lastIndex=argument.url.find("/",firstIndex+3,len(argument.url))
+    if lastIndex==-1:
+      lastIndex=len(argument.url)	
+    clearingHouseURL1=argument.url[firstIndex+2:lastIndex]
+    if lastIndex+1 < len(argument.url):
+      clearingHouseURL2="/"+argument.url[lastIndex+1:len(argument.url)]
+    else:
+      clearingHouseURL2="";
+    connectionToClearingHouse= httplib.HTTPSConnection(clearingHouseURL1)
+    connectionToClearingHouse.request("POST",clearingHouseURL2,body,headers) # sends the XMLRPC towards expedient
+    response=connectionToClearingHouse.getresponse(); # gets the answer from expedient. if everything was fine expedient should be requesting the new topology
+    self._log.info("---Expedient notification of topo change start---")
+    self._log.info(response.status) #check these prints to see what failed...
+    self._log.info(response.reason)
+    self._log.info(response.read()) 
+    self._log.info("---Expedient notification of topo change end---")
+    return ""
+
   #@check_user
   #@rpcmethod(signature=['string', 'string', 'string'])
   def pub_register_topology_callback(self, url, cookie, **kwargs):
-  #next step: see how this &*^&*$#@ information can be propagated to Expedient directly
-  #we need the topology to be automatically updated (not only manually)
-    '''  
-    #legacy (Jose ETHZ code)  
-    attrs = {'url': url, 'cookie': cookie}
-    filter_attrs = {'username': kwargs['user'].username,'password':kwargs['password'].password}
-    #filter_attrs = {'username': kwargs['user'].username}
-    utils.create_or_update(CallBackServerProxy, filter_attrs, attrs)  
-    '''  
+    callback_http_attrs = {'url': url, 'cookie': cookie}
+    if ('user' not in kwargs) or ('password' not in kwargs):
+      self._log.info("Credential info missing from expedient callback!")
+      return ""
+    callback_cred_attrs = {'username': kwargs['user'].username,'password':kwargs['password'].password}
+    #utils.create_or_update(CallBackServerProxy, filter_attrs, attrs)  
+    self.callback_http_attrs = callback_http_attrs
+    self.callback_cred_attrs = callback_cred_attrs   
     return ""
-
-
+  
   #as is, probably needs changes because of DB refs  
   #@check_user
   #@rpcmethod(signature=['string', 'string'])
@@ -824,23 +852,6 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
           gfs_list.append(fs_list)
       
       return gfs_list
-
-#    #legacy gfs parsing  
-#    try:
-#        exp = Experiment.objects.filter(slice_id = slice_id)
-#        if exp and len(exp) == 1:
-#            opts = exp[0].useropts_set.all()
-#            if opts:
-#                gfs = opts[0].optsflowspace_set.all()
-#                gfs = parse_granted_flowspaces(gfs)
-#            else:
-#                gfs = []
-#        else:
-#            gfs = []			
-#    except Exception,e:
-#        import traceback
-#        traceback.print_exc()
-#        raise Exception(parseFVexception(e))
 
     slice_urn = "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+slice+" + str(slice_id)
     if GeniDB.sliceExists(slice_urn):
