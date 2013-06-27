@@ -734,29 +734,30 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
                                  mac_src_e=int_to_mac(fs.mac_src_e),
                                  mac_dst_s=int_to_mac(fs.mac_dst_s),
                                  mac_dst_e=int_to_mac(fs.mac_dst_e),
-                                 eth_type_s=str(fs.eth_type_s),
-                                 eth_type_e=str(fs.eth_type_e),
-                                 vlan_id_s=str(fs.vlan_id_s),
-                                 vlan_id_e=str(fs.vlan_id_e),
+                                 eth_type_s=fs.eth_type_s,
+                                 eth_type_e=fs.eth_type_e,
+                                 vlan_id_s=fs.vlan_id_s,
+                                 vlan_id_e=fs.vlan_id_e,
                                  ip_src_s=int_to_dotted_ip(fs.ip_src_s),
                                  ip_dst_s=int_to_dotted_ip(fs.ip_dst_s),
                                  ip_src_e=int_to_dotted_ip(fs.ip_src_e),
                                  ip_dst_e=int_to_dotted_ip(fs.ip_dst_e),
-                                 ip_proto_s=str(fs.ip_proto_s),
-                                 ip_proto_e=str(fs.ip_proto_e),
-                                 tp_src_s=str(fs.tp_src_s),
-                                 tp_dst_s=str(fs.tp_dst_s),
-                                 tp_src_e=str(fs.tp_src_e),
-                                 tp_dst_e=str(fs.tp_dst_e),
+                                 ip_proto_s=fs.ip_proto_s,
+                                 ip_proto_e=fs.ip_proto_e,
+                                 tp_src_s=fs.tp_src_s,
+                                 tp_dst_s=fs.tp_dst_s,
+                                 tp_src_e=fs.tp_src_e,
+                                 tp_dst_e=fs.tp_dst_e,
                              )
         openflow_dict=dict(
-                                dpid=str(fs.dpid), 
+                                dpid=fs.dpid, 
                                 direction=fs.direction, 
-                                port_number_s=str(fs.port_number_s), 
-                                port_number_e=str(fs.port_number_e), 
+                                port_number_s=fs.port_number_s, 
+                                port_number_e=fs.port_number_e, 
                            )
         existing_fs = False
-        for prev_dict in gfs_list:
+        for prev_dict_list in gfs_list:
+          prev_dict = prev_dict_list[0]
           if fs_dict['flowspace'] == prev_dict['flowspace']:
             if openflow_dict not in prev_dict['openflow']:
               prev_dict['openflow'].append(openflow_dict)
@@ -764,7 +765,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
             break
         if not existing_fs:
           fs_dict['openflow'].append(openflow_dict) 
-          gfs_list.append(fs_dict)
+          fs_list = [fs_dict]
+          gfs_list.append(fs_list)
       
       return gfs_list
 
@@ -808,10 +810,11 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
         traceback.print_exc()
         self._log.exception("FlowSpace for the allocated slice is not returned")
         raise Exception(parseFVexception(e))
-      self._log.info("FlowSpace for the allocated slice is returned:")
-      for fs in gfs:
-        self._log.info(fs['flowspace'])
-        self._log.info(fs['openflow'])
+      #self._log.info("FlowSpace for the allocated slice is returned")
+      #for fs_list in gfs:
+      #  fs = fs_list[0]
+      #  self._log.info(fs['flowspace'])
+      #  self._log.info(fs['openflow'])
       if gfs == []:
         self._log.info("Empty FlowSpace for the allocated slice returned! Need to debug...")
       return gfs
