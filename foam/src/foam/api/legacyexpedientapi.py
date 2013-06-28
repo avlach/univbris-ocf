@@ -665,12 +665,6 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       traceback.print_exc()
       raise e 
     complete_list.extend(switches) 
-    if self.switch_dpid_list is None: #occurs only on foam startup
-      if complete_list != []:
-        switch_dpids_unzipped, infos = zip(*complete_list)
-        self.switch_dpid_list = list(switch_dpids_unzipped)
-      else:
-        self.switch_dpid_list = []
     return complete_list
   
   #modified, to be checked
@@ -693,12 +687,17 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       traceback.print_exc()
       raise e 
     complete_list.extend(links) 
-    if self.link_list is None: #occurs only on foam startup
-      self.link_list = complete_list
     return complete_list
   
   def check_topo_change(self):
     #self._log.info("Topo check fired!")
+    if (self.switch_dpid_list is None) or (self.link_list is None): #on startup ping rebuild FV info
+      if self.pub_get_switches() != []:
+        switch_dpids_unzipped, infos = zip(*self.pub_get_switches())
+        self.switch_dpid_list = list(switch_dpids_unzipped)
+      else:
+        self.switch_dpid_list = []
+      self.link_list = self.pub_get_links()
     try:
       if self.pub_get_switches() != []:
         updated_switch_dpids_unzipped, infos = zip(*self.pub_get_switches())
@@ -711,6 +710,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
         self.topology_changed_alert_expedient()   
       if (updated_link_list != self.link_list):
         self._log.info("Topology has changed because one or more links is(are) up or down!")
+        self.topology_changed_alert_expedient() 
       self.switch_dpid_list = updated_switch_dpid_list
       self.link_list = updated_link_list
     except Exception, e:
