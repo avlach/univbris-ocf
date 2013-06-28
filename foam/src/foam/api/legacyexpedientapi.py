@@ -119,17 +119,9 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       f.close()
     else:
       self.slice_info_dict = {}
-    if ConfigDB.getConfigItemByKey("flowvisor.hostname").getValue() is None:
-      self.switch_dpid_list = []
-      self.link_list = []
-    else:
-      switches = self.pub_get_switches()
-      if switches != []:
-        switch_dpids_unzipped, infos = zip(*self.pub_get_switches())
-        self.switch_dpid_list = list(switch_dpids_unzipped)
-      else:
-        self.switch_dpid_list = []
-      self.link_list = self.pub_get_links()
+    #if ConfigDB.getConfigItemByKey("flowvisor.hostname").getValue() is None:
+    self.switch_dpid_list = None
+    self.link_list = None
     self.callback_http_attrs = None
     self.callback_cred_attrs = None
     
@@ -673,6 +665,12 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       traceback.print_exc()
       raise e 
     complete_list.extend(switches) 
+    if self.switch_dpid_list is None: #occurs only on foam startup
+      if complete_list != []:
+        switch_dpids_unzipped, infos = zip(*complete_list)
+        self.switch_dpid_list = list(switch_dpids_unzipped)
+      else:
+        self.switch_dpid_list = []
     return complete_list
   
   #modified, to be checked
@@ -695,6 +693,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       traceback.print_exc()
       raise e 
     complete_list.extend(links) 
+    if self.link_list is None: #occurs only on foam startup
+      self.link_list = complete_list
     return complete_list
   
   def check_topo_change(self):
