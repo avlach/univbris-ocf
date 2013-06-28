@@ -119,13 +119,17 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       f.close()
     else:
       self.slice_info_dict = {}
-    switches = self.pub_get_switches()
-    if switches != []:
-      switch_dpids_unzipped, infos = zip(*self.pub_get_switches())
-      self.switch_dpid_list = list(switch_dpids_unzipped)
-    else:
+    if ConfigDB.getConfigItemByKey("flowvisor.hostname").getValue() is None:
       self.switch_dpid_list = []
-    self.link_list = self.pub_get_links()
+      self.link_list = []
+    else:
+      switches = self.pub_get_switches()
+      if switches != []:
+        switch_dpids_unzipped, infos = zip(*self.pub_get_switches())
+        self.switch_dpid_list = list(switch_dpids_unzipped)
+      else:
+        self.switch_dpid_list = []
+      self.link_list = self.pub_get_links()
     self.callback_http_attrs = None
     self.callback_cred_attrs = None
     
