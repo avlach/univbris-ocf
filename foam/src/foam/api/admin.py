@@ -394,7 +394,7 @@ class AdminAPIv1(Dispatcher):
         fspecs = sliv.getFlowspecs()
         for fs in fspecs:
           for vlanid in fs.getVLANs():
-            global_vlan_list[i] == "allocated"
+            global_vlan_list[vlanid] = "allocated"
 		
       free_vlan_list = []
       for i in global_vlan_list.iterkeys():
@@ -435,7 +435,8 @@ class AdminAPIv1(Dispatcher):
         fspecs = sliv.getFlowspecs()
         for fs in fspecs:
           for vlanid in fs.getVLANs():
-            used_vlans.append(vlanid)
+            if vlanid not in used_vlans:
+              used_vlans.append(vlanid)
       used_vlans.sort()
 		
       if (use_json == True):
@@ -505,6 +506,42 @@ class AdminAPIv1(Dispatcher):
       else:
         return returnval
 		
+    except JSONValidationError, e:
+      jd = e.__json__()
+      return jsonify(jd, code = 1, msg = jd["exception"])
+    except Exception, e:
+      self._log.exception("Exception")
+      return jsonify(None, code = 2, msg = traceback.format_exc())
+
+  @route('/core/admin/expedient-stamp-fs-with-vlan', methods=["POST", "GET"])
+  def expedientStampFSwithVlan(self):
+    try:
+      filedir = './opt/foam/db'
+      filename = os.path.join(filedir, 'expedient_slices_info.json')
+      if os.path.isfile(filename):
+        f = open(filename, 'r')
+        slice_info_dict = json.load(f)
+        f.close()
+        self.validate(request.json, [("slice_id", (str)), ("vlan_stamp", (int))])
+        slice_id = request.json["slice_id"]        
+        vlan_stamp = request.json["vlan_stamp"]
+        if slice_id not in slice_info_dict: 
+          self._log.exception("The slice id you have specified is not existent")
+          raise Exception
+        updated_slice_info_dict = slice_info_dict
+        for sliv_pos, sliver in enumerate(slice_info_dict[slice_id]['switch_slivers']):
+          for sfs_pos, sfs in enumerate(sliver['flowspace']):   
+            updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_start'] = vlan_stamp
+            updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_stop'] = vlan_stamp
+        #store updated dict as a json file in foam db folder
+        filedir = './opt/foam/db'
+        filename = os.path.join(filedir, 'expedient_slices_info.json')
+        f = open(filename, 'w')
+        json.dump(updated_slice_info_dict, f)
+        f.close()
+      else:
+        self._log.exception("The expedient slice info dict file is non-existent!")
+        raise Exception
     except JSONValidationError, e:
       jd = e.__json__()
       return jsonify(jd, code = 1, msg = jd["exception"])

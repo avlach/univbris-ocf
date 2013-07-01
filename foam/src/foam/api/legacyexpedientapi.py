@@ -600,6 +600,16 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       self._log.info("Slice is probably not started yet, doing nothing...")
       return ""
       #raise Exception("Something went wrong with the fs recovery")
+    #retrieve updated dict as a json file from foam db folder
+    filedir = './opt/foam/db'
+    filename = os.path.join(filedir, 'expedient_slices_info.json')
+    if os.path.isfile(filename):
+      f = open(filename, 'r')
+      self.slice_info_dict = json.load(f)
+      f.close()
+    else:
+      self._log.info("Slice is probably not started yet, doing nothing...")
+      return ""
     slice_of_rspec = create_ofv3_rspec(slice_id, self.slice_info_dict[slice_id]['project_name'], 
                                        self.slice_info_dict[slice_id]['project_desc'],
                                        self.slice_info_dict[slice_id]['slice_name'],
@@ -869,6 +879,16 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       #that means that the flow space as requested was allocated
       #so retrieve the fs in the form Expedient understands
       #TODO: check that ecery time this corresponds to the actual flowspec that FOAM has
+      #retrieve updated dict as a json file from foam db folder
+      filedir = './opt/foam/db'
+      filename = os.path.join(filedir, 'expedient_slices_info.json')
+      if os.path.isfile(filename):
+        f = open(filename, 'r')
+        self.slice_info_dict = json.load(f)
+        f.close()
+      else:
+        self._log.info("Slice is probably not started yet, doing nothing...")
+        return []
       if slice_id not in self.slice_info_dict:
         raise Exception("Something went wrong with the fs recovery")
       all_efs = self.create_slice_fs(self.slice_info_dict[slice_id]['switch_slivers']) 
