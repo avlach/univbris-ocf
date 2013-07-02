@@ -16,6 +16,29 @@ from foam.geni.db import GeniDB
 from foam.core.configdb import ConfigDB
 import foam.ofeliasettings.vlanset as ofvlset
 
+from foam.ethzlegacyoptinstuff.legacyoptin.optsmodels import Experiment, ExperimentFLowSpace
+from foam.ethzlegacyoptinstuff.legacyoptin.flowspaceutils import dotted_ip_to_int, mac_to_int,\
+    int_to_dotted_ip, int_to_mac, parseFVexception
+
+def _same(val):
+	return "%s" % val 
+
+class om_ch_translate(object): 
+  attr_funcs = {
+    # attr_name: (func to turn to str, width)
+    "dl_src": (int_to_mac, mac_to_int, 48, "mac_src","dl_src"),
+    "dl_dst": (int_to_mac, mac_to_int, 48, "mac_dst","dl_dst"),
+    "dl_type": (_same, int, 16, "eth_type","dl_type"),
+    "vlan_id": (_same, int, 12, "vlan_id","dl_vlan"),
+    "nw_src": (int_to_dotted_ip, dotted_ip_to_int, 32, "ip_src","nw_src"),
+    "nw_dst": (int_to_dotted_ip, dotted_ip_to_int, 32, "ip_dst","nw_dst"),
+    "nw_proto": (_same, int, 8, "ip_proto","nw_proto"),
+    "tp_src": (_same, int, 16, "tp_src","tp_src"),
+    "tp_dst": (_same, int, 16, "tp_dst","tp_dst"),
+    "port_num": (_same, int, 16, "port_number","in_port"),
+    }
+
+
 class AdminAPIv1(Dispatcher):
   def __init__ (self, app):
     super(AdminAPIv1, self).__init__("Admin v1", app.logger, app)
@@ -533,6 +556,21 @@ class AdminAPIv1(Dispatcher):
           for sfs_pos, sfs in enumerate(sliver['flowspace']):   
             updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_start'] = vlan_stamp
             updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_stop'] = vlan_stamp
+        all_efs = self.create_slice_fs(updated_slice_info_dict[slice_id]['switch_slivers'])
+        slice_of_rspec = create_ofv3_rspec(slice_id, updated_slice_info_dict[slice_id]['project_name'], updated_slice_info_dict[slice_id]['project_desc'], \
+                                      updated_slice_info_dict[slice_id]['slice_name'], updated_slice_info_dict[slice_id]['slice_desc'], \
+                                      updated_slice_info_dict[slice_id]['controller_url'], updated_slice_info_dict[slice_id]['owner_email'], \
+                                      updated_slice_info_dict[slice_id]['owner_password'], \
+                                      updated_slice_info_dict[slice_id]['switch_slivers'], all_efs)
+        self._log.info(slice_of_rspec) #print the new rspec in the log for debugging
+        #form the slice URN according to http://groups.geni.net/geni/wiki/GeniApiIdentifiers
+        slice_urn = "urn:publicid:IDN+openflow:foam:fp7-ofelia.eu:ocf+slice+" + str(slice_id)
+        creds = [] #creds are not needed at least for now: to be fixed
+        user_info = {}
+        user_info["urn"] = "urn:publicid:IDN+" + "openflow:fp7-ofelia.eu:ocf:ch+" + "user+" + str(updated_slice_info_dict[slice_id]['owner_email']) #temp hack
+        user_info["email"] = str(updated_slice_info_dict[slice_id]['owner_email'])
+        old_exp_shutdown_success = self.priv_DeleteSliver(slice_urn, creds, [])
+        creation_result = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)
         #store updated dict as a json file in foam db folder
         filedir = './opt/foam/db'
         filename = os.path.join(filedir, 'expedient_slices_info.json')
@@ -548,6 +586,146 @@ class AdminAPIv1(Dispatcher):
     except Exception, e:
       self._log.exception("Exception")
       return jsonify(None, code = 2, msg = traceback.format_exc())
+  
+  def pub_get_direction(self, direction):
+    if (direction == 'ingress'):
+      return 0
+    if (direction == 'egress'):
+      return 1
+    if (direction == 'bidirectional'):
+      return 2
+    return 2
+  
+  def create_slice_fs(self, switch_slivers):
+    #legacy create slice flowspaces
+    all_efs = [] 
+    for sliver in switch_slivers:
+      if "datapath_id" in sliver:
+        dpid = sliver['datapath_id']
+      else:
+        dpid = "00:" * 8
+        dpid = dpid[:-1]
+          
+      if len(sliver['flowspace'])==0:
+        efs = ExperimentFLowSpace()
+        #efs.exp  = e
+        efs.dpid = dpid
+        efs.direction = 2
+        all_efs.append(efs)
+      else:
+        for sfs in sliver['flowspace']:
+          efs = ExperimentFLowSpace()
+          #efs.exp  = e
+          efs.dpid = dpid
+          if "direction" in sfs:
+              efs.direction = self.get_direction(sfs['direction'])
+          else:
+              efs.direction = 2       
+          fs = self.pub_convert_star(sfs)
+          for attr_name,(to_str, from_str, width, om_name, of_name) in \
+          om_ch_translate.attr_funcs.items():
+              ch_start ="%s_start"%(attr_name)
+              ch_end ="%s_end"%(attr_name)
+              om_start ="%s_s"%(om_name)
+              om_end ="%s_e"%(om_name)
+              setattr(efs,om_start,from_str(fs[ch_start]))
+              setattr(efs,om_end,from_str(fs[ch_end]))
+          all_efs.append(efs)
+    return all_efs  
+
+  def convert_star(self, fs):
+    temp = fs.copy()
+    for ch_name, (to_str, from_str, width, om_name, of_name) in \
+    om_ch_translate.attr_funcs.items():
+      ch_start = "%s_start" % ch_name
+      ch_end = "%s_end" % ch_name
+      if ch_start not in fs or fs[ch_start] == "*":
+        temp[ch_start] = to_str(0)
+      if ch_end not in fs or fs[ch_end] == "*":
+        temp[ch_end] = to_str(2**width - 1)
+    return temp
+
+  def gapi_CreateSliver(self, slice_urn, credentials, rspec, users, force_approval=False, options=None):	
+    user_info = users
+    try:
+      if True:
+        self.recordAction("createsliver", credentials, slice_urn)
+        try:
+          self._log.debug("Parsed user cert with URN (%(urn)s) and email (%(email)s)" % users)
+        except Exception, e:
+          self._log.exception("UNFILTERED EXCEPTION")
+          user_info["urn"] = None
+          user_info["email"] = None
+        sliver = foam.geni.lib.createSliver(slice_urn, credentials, rspec, user_info)
+        style = ConfigDB.getConfigItemByKey("geni.approval.approve-on-creation").getValue()
+        if style == foam.geni.approval.NEVER:
+          approve = False
+        elif style == foam.geni.approval.ALWAYS:
+          approve = True
+        else:
+          approve = foam.geni.ofeliaapproval.of_analyzeForApproval(sliver)
+        if approve or force_approval:
+          pid = foam.task.approveSliver(sliver.getURN(), AUTO_SLIVER_PRIORITY)
+          self._log.debug("task.py launched for approve-sliver (PID: %d)" % pid)	
+        data = GeniDB.getSliverData(sliver.getURN(), True)
+        foam.task.emailCreateSliver(data)
+        return self.successResult(GeniDB.getManifest(sliver.getURN()))
+      return		
+    except foam.geni.lib.RspecParseError, e:
+      self._log.info(str(e))
+      e._foam_logged = True
+      raise e
+    except foam.geni.lib.RspecValidationError, e:
+      self._log.info(str(e))
+      e._foam_logged = True
+      raise e
+    except foam.geni.lib.DuplicateSliver, ds:
+      self._log.info("Attempt to create multiple slivers for slice [%s]" % (ds.slice_urn))
+      ds._foam_logged = True
+      raise ds
+    except foam.geni.lib.UnknownComponentManagerID, ucm:
+      raise Fault("UnknownComponentManager", "Component Manager ID specified in %s does not match this aggregate." % (ucm.cid))
+    except (foam.geni.lib.UnmanagedComponent, UnknownNode), uc:
+      self._log.info("Attempt to request unknown component %s" % (uc.cid))
+      f = Fault("UnmanagedComponent", "DPID in component %s is unknown to this aggregate." % (uc.cid))
+      f._foam_logged = True
+      raise f
+    except Exception, e:
+      self._log.exception("Exception")
+      raise e
+		  
+  def gapi_DeleteSliver(self, slice_urn, credentials, options=None):
+    try:
+      if True:
+        self.recordAction("deletesliver", credentials, slice_urn)
+        if GeniDB.getSliverURN(slice_urn) is None:
+          raise Fault("DeleteSliver", "Sliver for slice URN (%s) does not exist" % (slice_urn))
+          return self.errorResult(12, "") #not sure if this is needed
+        sliver_urn = GeniDB.getSliverURN(slice_urn)
+        data = GeniDB.getSliverData(sliver_urn, True)
+        foam.geni.lib.deleteSliver(sliver_urn = sliver_urn)
+        foam.task.emailGAPIDeleteSliver(data)
+        return self.successResult(True)
+      return self.successResult(False)	
+    except UnknownSlice, x:
+      self._log.info("Attempt to delete unknown sliver for slice URN %s" % (slice_urn))
+      x._foam_logged = True
+      raise x 
+    except Exception, e:
+      self._log.exception("Exception")
+      raise e
+
+  def successResult(self, value):
+    code_dict = dict(geni_code=0)
+    return dict(code=code_dict,
+                value=value,
+                output="")
+          								
+  def errorResult(self, code, output):
+    code_dict = dict(geni_code=code)
+    return dict(code=code_dict,
+                value="",
+                output=output)
 		
   #VLAN handling code-base end
 

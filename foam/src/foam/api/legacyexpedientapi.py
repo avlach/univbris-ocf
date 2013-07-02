@@ -52,7 +52,6 @@ import sfa
 from foam.flowvisor import Connection as FV
 
 #my imports
-from foam.app import admin_apih #admin is setup beforehand so handler is perfect for handling slices
 #from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import create_ofv3_rspec,\
 #    extract_IP_mask_from_IP_range
 #from foam.app import legexpgapi2_apih #use legexpgapi2 handler
@@ -917,6 +916,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_fv_set
   #@rpcmethod()
   def pub_get_offered_vlans(self, set=None):
+    from foam.app import admin_apih #admin is setup beforehand so handler is perfect for handling slices
     return admin_apih.adminOfferVlanTags(set, False)
 
   def pub_test_api_access(self, sayHello):
