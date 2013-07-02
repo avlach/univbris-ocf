@@ -583,6 +583,7 @@ class AdminAPIv1(Dispatcher):
         f = open(filename, 'w')
         json.dump(updated_slice_info_dict, f)
         f.close()
+        return jsonify({"slice-stamped" : "yes"})
       else:
         self._log.exception("The expedient slice info dict file is non-existent!")
         raise Exception
