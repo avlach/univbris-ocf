@@ -14,11 +14,15 @@ import foam.lib
 import foam.geni.lib
 from foam.geni.db import GeniDB
 from foam.core.configdb import ConfigDB
+import os, sys
+import json
 import foam.ofeliasettings.vlanset as ofvlset
 
 from foam.ethzlegacyoptinstuff.legacyoptin.optsmodels import Experiment, ExperimentFLowSpace
 from foam.ethzlegacyoptinstuff.legacyoptin.flowspaceutils import dotted_ip_to_int, mac_to_int,\
     int_to_dotted_ip, int_to_mac, parseFVexception
+from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import *
+
 
 def _same(val):
 	return "%s" % val 
@@ -523,7 +527,6 @@ class AdminAPIv1(Dispatcher):
           returnval = [x for x in range(1,4095) if x not in self.adminListAllocatedVlans(False) and x not in ofvlset.UNALLOWED_VLANS][:set]
         else:
           returnval = None
-
       if (use_json == True):
         return jsonify({"offered-vlan-tags" : returnval})
       else:
@@ -548,14 +551,17 @@ class AdminAPIv1(Dispatcher):
         self.validate(request.json, [("slice_id", (str)), ("vlan_stamp", (int))])
         slice_id = request.json["slice_id"]        
         vlan_stamp = request.json["vlan_stamp"]
-        if slice_id not in slice_info_dict: 
-          self._log.exception("The slice id you have specified is not existent")
+        if (slice_id == "") or (slice_id not in slice_info_dict): 
+          self._log.exception("The slice id you have specified is non-existent")
+          raise Exception
+        if vlan_stamp == 0:
+          self._log.exception("You must provide a valid vlan stamp! Be careful with the provision, it is up to you")
           raise Exception
         updated_slice_info_dict = slice_info_dict
         for sliv_pos, sliver in enumerate(slice_info_dict[slice_id]['switch_slivers']):
           for sfs_pos, sfs in enumerate(sliver['flowspace']):   
             updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_start'] = vlan_stamp
-            updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_stop'] = vlan_stamp
+            updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_end'] = vlan_stamp
         all_efs = self.create_slice_fs(updated_slice_info_dict[slice_id]['switch_slivers'])
         slice_of_rspec = create_ofv3_rspec(slice_id, updated_slice_info_dict[slice_id]['project_name'], updated_slice_info_dict[slice_id]['project_desc'], \
                                       updated_slice_info_dict[slice_id]['slice_name'], updated_slice_info_dict[slice_id]['slice_desc'], \
@@ -569,8 +575,8 @@ class AdminAPIv1(Dispatcher):
         user_info = {}
         user_info["urn"] = "urn:publicid:IDN+" + "openflow:fp7-ofelia.eu:ocf:ch+" + "user+" + str(updated_slice_info_dict[slice_id]['owner_email']) #temp hack
         user_info["email"] = str(updated_slice_info_dict[slice_id]['owner_email'])
-        old_exp_shutdown_success = self.priv_DeleteSliver(slice_urn, creds, [])
-        creation_result = self.priv_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)
+        old_exp_shutdown_success = self.gapi_DeleteSliver(slice_urn, creds, [])
+        creation_result = self.gapi_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)
         #store updated dict as a json file in foam db folder
         filedir = './opt/foam/db'
         filename = os.path.join(filedir, 'expedient_slices_info.json')
@@ -587,7 +593,7 @@ class AdminAPIv1(Dispatcher):
       self._log.exception("Exception")
       return jsonify(None, code = 2, msg = traceback.format_exc())
   
-  def pub_get_direction(self, direction):
+  def get_direction(self, direction):
     if (direction == 'ingress'):
       return 0
     if (direction == 'egress'):
@@ -621,7 +627,7 @@ class AdminAPIv1(Dispatcher):
               efs.direction = self.get_direction(sfs['direction'])
           else:
               efs.direction = 2       
-          fs = self.pub_convert_star(sfs)
+          fs = self.convert_star(sfs)
           for attr_name,(to_str, from_str, width, om_name, of_name) in \
           om_ch_translate.attr_funcs.items():
               ch_start ="%s_start"%(attr_name)
@@ -646,10 +652,15 @@ class AdminAPIv1(Dispatcher):
     return temp
 
   def gapi_CreateSliver(self, slice_urn, credentials, rspec, users, force_approval=False, options=None):	
+    #GENI API imports
+    from foam.geni.db import GeniDB, UnknownSlice, UnknownNode
+    import foam.geni.approval
+    import foam.geni.ofeliaapproval
+    import sfa
     user_info = users
     try:
       if True:
-        self.recordAction("createsliver", credentials, slice_urn)
+        #self.recordAction("createsliver", credentials, slice_urn)
         try:
           self._log.debug("Parsed user cert with URN (%(urn)s) and email (%(email)s)" % users)
         except Exception, e:
@@ -695,9 +706,14 @@ class AdminAPIv1(Dispatcher):
       raise e
 		  
   def gapi_DeleteSliver(self, slice_urn, credentials, options=None):
+    #GENI API imports
+    from foam.geni.db import GeniDB, UnknownSlice, UnknownNode
+    import foam.geni.approval
+    import foam.geni.ofeliaapproval
+    import sfa
     try:
       if True:
-        self.recordAction("deletesliver", credentials, slice_urn)
+        #self.recordAction("deletesliver", credentials, slice_urn)
         if GeniDB.getSliverURN(slice_urn) is None:
           raise Fault("DeleteSliver", "Sliver for slice URN (%s) does not exist" % (slice_urn))
           return self.errorResult(12, "") #not sure if this is needed

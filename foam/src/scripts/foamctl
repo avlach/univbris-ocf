@@ -602,6 +602,21 @@ def do_offerVlanTags (opts):
   data = connect(url, opts.C_user, passwd, obj)
   outputJSON(data)
 
+def pa_stampFsWithVlan (args):
+  parser = OptionParser()
+  addCommonOpts(parser)
+  parser.add_option("--sliceid", dest="slice_id", type="str", default="")
+  parser.add_option("--vlanstamp", dest="vlan_stamp", type="int", default=0)
+  (options, args) = parser.parse_args(args)
+  return options
+
+def do_stampFsWithVlan (opts):
+  passwd = getPassword(opts)
+  url = URL % (opts.host, "expedient-stamp-fs-with-vlan")
+  obj = {"slice_id" : opts.slice_id, "vlan_stamp" : opts.vlan_stamp}
+  data = connect(url, opts.C_user, passwd, obj)
+  outputJSON(data)
+
 #Vasileios: VLAN handling (see admin.py for source code) end
 
 def connect (url, user, passwd, data = None):
@@ -715,10 +730,11 @@ CMDS = {
     'geni:approval:remove-port' : (pa_portgroup, do_geniApprovalPGRemovePort),
     'geni:approval:list-port-groups' : (pa_defaults, do_geniApprovalPGList),
     'geni:approval:show-port-group' : (pa_portgroup, do_geniApprovalPGShow),
-    'ofelia:adminListVLANs' : (pa_listVlans, do_listVlans),
-    'ofelia:adminListAllocatedVlans' : (pa_listAllocVlans, do_listAllocVlans),
-    'ofelia:adminListAllocatedVlansSorted' : (pa_listAllocVlansSorted, do_listAllocVlansSorted),
-    'ofelia:adminOfferVlanTags' : (pa_offerVlanTags, do_offerVlanTags),
+    'ofelia:vlans:list-all-vlans' : (pa_listVlans, do_listVlans),
+    'ofelia:vlans:list-allocated-vlans' : (pa_listAllocVlans, do_listAllocVlans),
+    'ofelia:vlans:list-allocated-vlans-sorted' : (pa_listAllocVlansSorted, do_listAllocVlansSorted),
+    'ofelia:vlans:offer-vlan-tags' : (pa_offerVlanTags, do_offerVlanTags),
+    'ofelia:vlans:stamp-slice-fs-with-vlan': (pa_stampFsWithVlan, do_stampFsWithVlan),
 }
 
 if __name__ == '__main__':
