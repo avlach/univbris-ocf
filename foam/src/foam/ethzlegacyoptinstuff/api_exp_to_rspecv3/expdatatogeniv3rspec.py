@@ -8,13 +8,31 @@ from os.path import expanduser
 #import the etree module
 from lxml import etree
 #import om_ch_translate class from the api to use for the fs field names
-from foam.api.legacyexpedientapi import om_ch_translate
+#from foam.api.legacyexpedientapi import om_ch_translate
 #import some utility functions from flowspaceutils of the legacy optin manager
 from foam.ethzlegacyoptinstuff.legacyoptin.flowspaceutils import dotted_ip_to_int, mac_to_int, int_to_dotted_ip, int_to_mac
 
 #needed for the auxiliray function extract_IP_mask_from_IP_range
 import operator
 import math
+
+def _same(val):
+	return "%s" % val 
+
+class om_ch_translate(object): 
+  attr_funcs = {
+    # attr_name: (func to turn to str, width)
+    "dl_src": (int_to_mac, mac_to_int, 48, "mac_src","dl_src"),
+    "dl_dst": (int_to_mac, mac_to_int, 48, "mac_dst","dl_dst"),
+    "dl_type": (_same, int, 16, "eth_type","dl_type"),
+    "vlan_id": (_same, int, 12, "vlan_id","dl_vlan"),
+    "nw_src": (int_to_dotted_ip, dotted_ip_to_int, 32, "ip_src","nw_src"),
+    "nw_dst": (int_to_dotted_ip, dotted_ip_to_int, 32, "ip_dst","nw_dst"),
+    "nw_proto": (_same, int, 8, "ip_proto","nw_proto"),
+    "tp_src": (_same, int, 16, "tp_src","tp_src"),
+    "tp_dst": (_same, int, 16, "tp_dst","tp_dst"),
+    "port_num": (_same, int, 16, "port_number","in_port"),
+    }
 
 #transforms an IP1-IP2 expression to an IP/netmask expression (as used in FOAM) 
 #IP1 and IP2 are in dotted format ==> yields the minimum range in which IP1 and IP2 are included

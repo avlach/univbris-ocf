@@ -103,7 +103,7 @@ class RepeatTimer(threading.Thread):
   def cancel(self):
     self.event.set()
 
-from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import *
+from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import create_ofv3_rspec
 
 class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   def __init__ (self, log):
@@ -342,6 +342,13 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
               setattr(efs,om_end,from_str(fs[ch_end]))
           all_efs.append(efs)
     return all_efs
+  
+  def purge_switch_slivers_from_null_fs(self, switch_slivers):
+    purged_switch_slivers = switch_slivers
+    for sliver in purged_switch_slivers:
+      if len(sliver['flowspace'])==0: #null flowspace, take the sliver out
+        purged_switch_slivers.remove(sliver)
+    return purged_switch_slivers   
 
   #coded from scratch, to be checked
   #@check_user
@@ -456,7 +463,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       old_e = e[0]
       old_fv_name = old_e.get_fv_slice_name()
       update_exp = True
-      old_exp_fs = ExperimentFLowSpace.objects.filter(exp=old_e)
+      old_exp_fs = ExperimentFLowSpace.objects.filtswier(exp=old_e)
     else:
       update_exp = False  
     '''  
@@ -472,6 +479,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
 #    e.owner_password = owner_password
 #    e.save()
     #update dict info
+    purged_switch_slivers = self.purge_switch_slivers_from_null_fs(switch_slivers)
     self.slice_info_dict[slice_id] = {}
     self.slice_info_dict[slice_id]['project_name'] = project_name
     self.slice_info_dict[slice_id]['project_desc'] = project_description
@@ -480,16 +488,16 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     self.slice_info_dict[slice_id]['controller_url'] = controller_url
     self.slice_info_dict[slice_id]['owner_email'] = owner_email
     self.slice_info_dict[slice_id]['owner_password'] = owner_password
-    self.slice_info_dict[slice_id]['switch_slivers'] = switch_slivers 
+    self.slice_info_dict[slice_id]['switch_slivers'] = purged_switch_slivers
    
-    all_efs = self.create_slice_fs(switch_slivers)
+    all_efs = self.create_slice_fs(purged_switch_slivers)
     
     #set the necessary parameters so that we can use FOAM internal functions for sliver creation
     #Vasileios: now that the requested flowspaces are identified, create the rspec (to be used in FOAM)
     slice_of_rspec = create_ofv3_rspec(slice_id, project_name, project_description, \
                                       slice_name, slice_description, controller_url, \
                                       owner_email, owner_password, \
-                                      switch_slivers, all_efs)
+                                      purged_switch_slivers, all_efs)
     self._log.info(slice_of_rspec) #print the rspec in the log for debugging
 
     #form the slice URN according to http://groups.geni.net/geni/wiki/GeniApiIdentifiers
