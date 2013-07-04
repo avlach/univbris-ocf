@@ -46,6 +46,7 @@ class om_ch_translate(object):
 class AdminAPIv1(Dispatcher):
   def __init__ (self, app):
     super(AdminAPIv1, self).__init__("Admin v1", app.logger, app)
+    self.vlan_automation_on = False
     self._log.info("Loaded")
 
   def validate (self, rjson, types):
@@ -561,7 +562,7 @@ class AdminAPIv1(Dispatcher):
         if vlan_stamp_start == 0:
           self._log.exception("You must provide a valid vlan stamp! Be careful with the provision, it is up to you")
           raise Exception
-        updated_slice_info_dict = slice_info_dict
+        updated_slice_info_dict = slice_info_dict.copy()
         for sliv_pos, sliver in enumerate(slice_info_dict[slice_id]['switch_slivers']):
           for sfs_pos, sfs in enumerate(sliver['flowspace']):   
             updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_start'] = vlan_stamp_start
@@ -747,7 +748,17 @@ class AdminAPIv1(Dispatcher):
     return dict(code=code_dict,
                 value="",
                 output=output)
-		
+	
+  @route('/core/admin/enable-vlan-assignment-automation', methods=["POST", "GET"])
+  def enableVlanAssignmentAutomation(self):
+    self.vlan_automation_on = True
+    return jsonify({"Vlan Assignment Automation" : "on"})
+
+  @route('/core/admin/disable-vlan-assignment-automation', methods=["POST", "GET"])
+  def disableVlanAssignmentAutomation(self):
+    self.vlan_automation_on = False
+    return jsonify({"Vlan Assignment Automation" : "off"})
+
   #VLAN handling code-base end
 
 def setup (app):

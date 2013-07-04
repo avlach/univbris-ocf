@@ -625,6 +625,32 @@ def do_stampFsWithVlan (opts):
   data = connect(url, opts.C_user, passwd, obj)
   outputJSON(data)
 
+def pa_enableVlanAuto (args):
+  parser = OptionParser()
+  addCommonOpts(parser)
+  (options, args) = parser.parse_args(args)
+  return options
+
+def do_enableVlanAuto (opts):
+  passwd = getPassword(opts)
+  url = URL % (opts.host, "enable-vlan-assignment-automation")
+  obj = None
+  data = connect(url, opts.C_user, passwd, obj)
+  outputJSON(data)
+
+def pa_disableVlanAuto (args):
+  parser = OptionParser()
+  addCommonOpts(parser)
+  (options, args) = parser.parse_args(args)
+  return options
+
+def do_disableVlanAuto (opts):
+  passwd = getPassword(opts)
+  url = URL % (opts.host, "disable-vlan-assignment-automation")
+  obj = None
+  data = connect(url, opts.C_user, passwd, obj)
+  outputJSON(data)
+  
 #Vasileios: VLAN handling (see admin.py for source code) end
 
 def connect (url, user, passwd, data = None):
@@ -743,6 +769,8 @@ CMDS = {
     'ofelia:vlans:list-allocated-vlans-sorted' : (pa_listAllocVlansSorted, do_listAllocVlansSorted),
     'ofelia:vlans:offer-vlan-tags' : (pa_offerVlanTags, do_offerVlanTags),
     'ofelia:vlans:stamp-slice-fs-with-vlan-range': (pa_stampFsWithVlan, do_stampFsWithVlan),
+    'ofelia:vlans:enable-full-vlan-assignment-automation' : (pa_enableVlanAuto, do_enableVlanAuto),
+    'ofelia:vlans:disable-full-vlan-assignment-automation' : (pa_disableVlanAuto, do_disableVlanAuto),
 }
 
 if __name__ == '__main__':

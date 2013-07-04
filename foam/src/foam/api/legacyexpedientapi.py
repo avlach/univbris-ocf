@@ -146,17 +146,46 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
           self._log.exception("UNFILTERED EXCEPTION")
           user_info["urn"] = None
           user_info["email"] = None
-        sliver = foam.geni.lib.createSliver(slice_urn, credentials, rspec, user_info)
-        style = ConfigDB.getConfigItemByKey("geni.approval.approve-on-creation").getValue()
-        if style == foam.geni.approval.NEVER:
-          approve = False
-        elif style == foam.geni.approval.ALWAYS:
-          approve = True
+        from foam.app import admin_apih
+        if not admin_apih.vlan_automation_on:
+          sliver = foam.geni.lib.createSliver(slice_urn, credentials, rspec, user_info)
+          style = ConfigDB.getConfigItemByKey("geni.approval.approve-on-creation").getValue()
+          if style == foam.geni.approval.NEVER:
+            approve = False
+          elif style == foam.geni.approval.ALWAYS:
+            approve = True
+          else:
+            approve = foam.geni.ofeliaapproval.of_analyzeForApproval(sliver)
+          if approve or force_approval:
+            pid = foam.task.approveSliver(sliver.getURN(), AUTO_SLIVER_PRIORITY)
+            self._log.debug("task.py launched for approve-sliver (PID: %d)" % pid)	
         else:
-          approve = foam.geni.ofeliaapproval.of_analyzeForApproval(sliver)
-        if approve or force_approval:
+          free_vlan_list = self.pub_get_offered_vlans(1)
+          free_vlan = free_vlan_list[0]
+          slice_id = slice_urn.split("+slice+")[1].split(":")[0]
+          #filedir = './opt/foam/db'
+          #filename = os.path.join(filedir, 'expedient_slices_info.json')
+          #f = open(filename, 'r')
+          #self.slice_info_dict = json.load(f)
+          #f.close()
+          if (slice_id == "") or (slice_id not in self.slice_info_dict): 
+            self._log.exception("The slice id you specified is non-existent")
+            raise Exception
+          updated_slice_info_dict = self.slice_info_dict.copy()
+          for sliv_pos, sliver in enumerate(self.slice_info_dict[slice_id]['switch_slivers']):
+            for sfs_pos, sfs in enumerate(sliver['flowspace']):   
+              updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_start'] = free_vlan
+              updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_end'] = free_vlan
+          all_efs = self.create_slice_fs(updated_slice_info_dict[slice_id]['switch_slivers'])
+          new_slice_of_rspec = create_ofv3_rspec(slice_id, updated_slice_info_dict[slice_id]['project_name'], updated_slice_info_dict[slice_id]['project_desc'], \
+                                      updated_slice_info_dict[slice_id]['slice_name'], updated_slice_info_dict[slice_id]['slice_desc'], \
+                                      updated_slice_info_dict[slice_id]['controller_url'], updated_slice_info_dict[slice_id]['owner_email'], \
+                                      updated_slice_info_dict[slice_id]['owner_password'], \
+                                      updated_slice_info_dict[slice_id]['switch_slivers'], all_efs)
+          self.slice_info_dict = updated_slice_info_dict.copy()
+          sliver = foam.geni.lib.createSliver(slice_urn, credentials, new_slice_of_rspec, user_info)
           pid = foam.task.approveSliver(sliver.getURN(), AUTO_SLIVER_PRIORITY)
-          self._log.debug("task.py launched for approve-sliver (PID: %d)" % pid)	
+          self._log.debug("task.py launched for approve-sliver (PID: %d)" % pid)
         data = GeniDB.getSliverData(sliver.getURN(), True)
         foam.task.emailCreateSliver(data)
         return self.successResult(GeniDB.getManifest(sliver.getURN()))
