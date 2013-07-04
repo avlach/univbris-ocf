@@ -434,6 +434,9 @@ class AdminAPIv1(Dispatcher):
         if global_vlan_list[i] == "allocated":
           allocated_vlan_list.append(i)	
       allocated_vlan_list.sort()
+
+      for vlan_id in ofvlset.UNALLOWED_VLANS:
+        free_vlan_list.remove(vlan_id)
 		
       #if (use_json == True):
       return jsonify({"free-vlans" : free_vlan_list, "allocated-vlans" : allocated_vlan_list})

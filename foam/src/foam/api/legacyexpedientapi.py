@@ -345,9 +345,13 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   
   def purge_switch_slivers_from_null_fs(self, switch_slivers):
     purged_switch_slivers = switch_slivers
+    slivers_to_remove = []
     for sliver in purged_switch_slivers:
       if len(sliver['flowspace'])==0: #null flowspace, take the sliver out
-        purged_switch_slivers.remove(sliver)
+        slivers_to_remove.append(sliver)    
+    for sliver in slivers_to_remove:
+      purged_switch_slivers.remove(sliver)
+    del slivers_to_remove
     return purged_switch_slivers   
 
   #coded from scratch, to be checked
