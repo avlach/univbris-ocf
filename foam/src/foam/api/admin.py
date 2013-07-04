@@ -551,20 +551,21 @@ class AdminAPIv1(Dispatcher):
         f = open(filename, 'r')
         slice_info_dict = json.load(f)
         f.close()
-        self.validate(request.json, [("slice_id", (str)), ("vlan_stamp", (int))])
-        slice_id = request.json["slice_id"]        
-        vlan_stamp = request.json["vlan_stamp"]
+        self.validate(request.json, [("urn", (str)), ("vlan_stamp_start", (int)), ("vlan_stamp_end", (int))])
+        slice_id = request.json["urn"].split("+slice+")[1].split(":")[0]        
+        vlan_stamp_start = request.json["vlan_stamp_start"]
+        vlan_stamp_end = request.json["vlan_stamp_end"]
         if (slice_id == "") or (slice_id not in slice_info_dict): 
           self._log.exception("The slice id you have specified is non-existent")
           raise Exception
-        if vlan_stamp == 0:
+        if vlan_stamp_start == 0:
           self._log.exception("You must provide a valid vlan stamp! Be careful with the provision, it is up to you")
           raise Exception
         updated_slice_info_dict = slice_info_dict
         for sliv_pos, sliver in enumerate(slice_info_dict[slice_id]['switch_slivers']):
           for sfs_pos, sfs in enumerate(sliver['flowspace']):   
-            updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_start'] = vlan_stamp
-            updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_end'] = vlan_stamp
+            updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_start'] = vlan_stamp_start
+            updated_slice_info_dict[slice_id]['switch_slivers'][sliv_pos]['flowspace'][sfs_pos]['vlan_id_end'] = vlan_stamp_end
         all_efs = self.create_slice_fs(updated_slice_info_dict[slice_id]['switch_slivers'])
         slice_of_rspec = create_ofv3_rspec(slice_id, updated_slice_info_dict[slice_id]['project_name'], updated_slice_info_dict[slice_id]['project_desc'], \
                                       updated_slice_info_dict[slice_id]['slice_name'], updated_slice_info_dict[slice_id]['slice_desc'], \

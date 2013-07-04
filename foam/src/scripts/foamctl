@@ -63,6 +63,7 @@ def do_listSlivers (opts):
     obj["status"] = opts.status
 
   data = connect(url, opts.C_user, passwd, obj)
+  print "Tip: use the --status flag with value pending or approved for showing pending or approved slivers, ir the --deleted flag to show deleted ones"
   outputJSON(data)
 
 def pa_approveSliver (args):
@@ -147,6 +148,8 @@ def do_showSliver (opts):
   url = URL % (opts.host, "show-sliver")
   if opts.urn is None:
     exit("You must supply a urn with -u/--urn")
+  print "Use the --flowspace or --flowspec or --rspec flags for more info"
+  print "results:"
   obj = {"sliver_urn" : opts.urn}
   if opts.flowspace:
     obj["flowspace"] = True
@@ -600,20 +603,25 @@ def do_offerVlanTags (opts):
   url = URL % (opts.host, "offer-vlan-tags")
   obj = {"vlan_set" : opts.vlan_set}
   data = connect(url, opts.C_user, passwd, obj)
-  outputJSON(data)
+  outputJSON(data, False)
+  print "Use the --vlanset <vlan set> flag if you want the first" + " vlan set " + " vlans to be presented"
+  sys.exit(1)
 
 def pa_stampFsWithVlan (args):
   parser = OptionParser()
   addCommonOpts(parser)
-  parser.add_option("--sliceid", dest="slice_id", type="str", default="")
-  parser.add_option("--vlanstamp", dest="vlan_stamp", type="int", default=0)
+  parser.add_option("--urn", dest="urn", type="str", default=None)
+  parser.add_option("--vlanstampstart", dest="vlan_stamp_start", type="int", default=0)
+  parser.add_option("--vlanstampend", dest="vlan_stamp_end", type="int", default=0)
   (options, args) = parser.parse_args(args)
   return options
 
 def do_stampFsWithVlan (opts):
   passwd = getPassword(opts)
   url = URL % (opts.host, "expedient-stamp-fs-with-vlan")
-  obj = {"slice_id" : opts.slice_id, "vlan_stamp" : opts.vlan_stamp}
+  if (opts.urn is None) or (opts.vlan_stamp_start == 0) or (opts.vlan_stamp_end == 0):
+    exit("Usage: foamctl ofelia:vlans:stamp-fs-with-vlan --urn <sliver urn> --vlanstampstart <vlan stamp start> --vlanstampstop <vlan stamp stop") 
+  obj = {"urn" : opts.urn, "vlan_stamp_start" : opts.vlan_stamp_start, "vlan_stamp_end" : opts.vlan_stamp_end}
   data = connect(url, opts.C_user, passwd, obj)
   outputJSON(data)
 
@@ -734,7 +742,7 @@ CMDS = {
     'ofelia:vlans:list-allocated-vlans' : (pa_listAllocVlans, do_listAllocVlans),
     'ofelia:vlans:list-allocated-vlans-sorted' : (pa_listAllocVlansSorted, do_listAllocVlansSorted),
     'ofelia:vlans:offer-vlan-tags' : (pa_offerVlanTags, do_offerVlanTags),
-    'ofelia:vlans:stamp-slice-fs-with-vlan': (pa_stampFsWithVlan, do_stampFsWithVlan),
+    'ofelia:vlans:stamp-slice-fs-with-vlan-range': (pa_stampFsWithVlan, do_stampFsWithVlan),
 }
 
 if __name__ == '__main__':
