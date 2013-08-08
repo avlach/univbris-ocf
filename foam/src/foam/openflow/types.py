@@ -15,6 +15,7 @@ class Port(object):
   def __init__ (self):
     self.name = None
     self.num = None
+    self.features = None
     self.__dpid = None
 
   @property

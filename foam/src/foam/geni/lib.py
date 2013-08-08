@@ -74,7 +74,10 @@ def addAdDevice (rspec, dpid, active=True):
   if active:
     ports = FV.getDevicePorts(dpid)
     for port in ports:
-      p = ET.SubElement(od, "{%s}port" % (OFNSv3), num=str(port.num), name=port.name)
+      if (port.features == None):
+        p = ET.SubElement(od, "{%s}port" % (OFNSv3), num=str(port.num), name=port.name)
+      else:
+        p = ET.SubElement(od, "{%s}port" % (OFNSv3), num=str(port.num), name=port.name, features=port.features)
       for info in attachments.setdefault(port.name, []):
         a = ET.SubElement(p, "{%s}attachment" % (OFNSv3))
         a.attrib["remote_component_id"] = info.remote_component_id

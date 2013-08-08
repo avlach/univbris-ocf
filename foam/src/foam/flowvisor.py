@@ -64,6 +64,7 @@ class _Connection(object):
     self.__xmlport = ConfigDB.getConfigItemByKey("flowvisor.xmlrpc-port").getValue()
     self.__sliceCache = SliceCache()
     self.buildConnections()
+    self.fvversion = self.xmlcall("ping", "")
 
   def updateConfig (self, info):
     self.info = info
@@ -103,6 +104,11 @@ class _Connection(object):
 
   def getDevicePorts (self, dpid):
     self.log.debug("XMLRPC:getDeviceInfo (%s)" % (dpid))
+    
+    pinfoall = []
+    if "vertigo" in self.fvversion:
+      pinfoall = self.xmlcall("getVTPlannerPortInfo", dpid, "all")
+      
     portlist = []
     dinfo = self.xmlcall("getDeviceInfo", dpid)
     for portstr in dinfo["portNames"].split(","):
@@ -110,6 +116,13 @@ class _Connection(object):
       elems = portstr.split("(")
       p.name = elems[0]
       p.num = int(elems[1][:-1])
+      
+      for pinfo in pinfoall:
+        pelems = pinfo.split(",")
+        if int(pelems[0]) == p.num:
+          p.features = pelems[2]
+          break
+      
       p.dpid = dpid
       portlist.append(p)
     return portlist
