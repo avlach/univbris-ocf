@@ -106,6 +106,7 @@ def getAdvertisement ():
 
   links = FV.getLinkList()
   devices = FV.getDeviceList()
+  fvversion = FV.getFVVersion()
   db_devices = GeniDB.getDeviceSet()
   GeniDB.refreshDevices(devices)
 

@@ -64,7 +64,6 @@ class _Connection(object):
     self.__xmlport = ConfigDB.getConfigItemByKey("flowvisor.xmlrpc-port").getValue()
     self.__sliceCache = SliceCache()
     self.buildConnections()
-    self.fvversion = self.xmlcall("ping", "")
 
   def updateConfig (self, info):
     self.info = info
@@ -73,7 +72,7 @@ class _Connection(object):
 
   def buildConnections (self):
     self.xmlconn = xmlrpclib.ServerProxy("https://fvadmin:%s@%s:%d/xmlrpc" % (
-      self.__passwd, self.__host, self.__xmlport))
+      self.__passwd, self.__host, self.__xmlport))   
     self.jsonconn = jsonrpc.ServiceProxy("https://fvadmin:%s@%s:%d" % (
       self.__passwd, self.__host, self.__jsonport))
 
@@ -101,6 +100,11 @@ class _Connection(object):
   def getLinkList (self):
     self.log.debug("XMLRPC:getLinks")
     return self.xmlcall("getLinks")
+    
+  def getFVVersion (self):
+    self.log.debug("XMLRPC:getFVVersion")
+    self.fvversion = self.xmlcall("ping", "")
+    return self.fvversion
 
   def getDevicePorts (self, dpid):
     self.log.debug("XMLRPC:getDeviceInfo (%s)" % (dpid))
