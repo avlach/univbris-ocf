@@ -14,7 +14,7 @@
 #         Josh Smift <jbs@geni.net>
 
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DAEMON=/opt/foam/sbin/foam.fcgi
+DAEMON=/opt/ofelia/ofam/sbin/foam.fcgi
 NAME=foam
 DESC=FOAM
 PIDFILE=/var/run/$NAME.pid
@@ -36,7 +36,7 @@ chmod +x $DAEMON || exit 1
 # Start function
 do_start()
 {
-    export PYTHONPATH=/opt/foam/lib
+    export PYTHONPATH=/opt/ofelia/ofam/lib
     start-stop-daemon --start --make-pidfile --background --chuid www-data --quiet --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_ARGS || return $?
 }
 

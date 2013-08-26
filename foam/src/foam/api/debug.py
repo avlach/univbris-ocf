@@ -29,7 +29,7 @@ class DebugAPIv1(Dispatcher):
       import figleaf
       figleaf.stop()
       self._log.info("Coverage tracking stopped")
-      path = "/opt/foam/log/figleaf.%f.log" % (time.time())
+      path = "/opt/ofelia/ofam/log/figleaf.%f.log" % (time.time())
       figleaf.write_coverage(path)
       self._log.info("Coverage written to %s" % (path))
       return jsonify({"output-path" : path})

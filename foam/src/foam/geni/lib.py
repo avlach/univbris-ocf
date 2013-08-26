@@ -29,9 +29,9 @@ from foam.geni.db import GeniDB, getManagerID, generateSwitchComponentID, Unknow
 from foam.geni.topology import TopoDB
 import foam.geni.approval
 
-OFNSv3 = "/opt/foam/schemas"
-OFNSv4 = "/opt/foam/schemas"
-PGNS = "/opt/foam/schemas"
+OFNSv3 = "/opt/ofelia/ofam/schemas"
+OFNSv4 = "/opt/ofelia/ofam/schemas"
+PGNS = "/opt/ofelia/ofam/schemas"
 XSNS = "http://www.w3.org/2001/XMLSchema-instance"
 
 def deleteSliver (slice_urn = None, sliver_urn = None):
@@ -173,7 +173,7 @@ def createSliver (slice_urn, credentials, rspec, user_info):
     flog.exception("XML rspec parsing error")
     raise RspecParseError(slice_urn, str(exc))
 
-  of3 = open("/opt/foam/schemas/of-resv-3.xsd", "r")
+  of3 = open("/opt/ofelia/ofam/schemas/of-resv-3.xsd", "r")
   xsdoc3 = etree.parse(of3)
   xs3 = etree.XMLSchema(xsdoc3)
 

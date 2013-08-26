@@ -64,14 +64,14 @@ def addDir (path, owner):
 def install_foam ():
   call("python setup.py install")
 
-  addDir("/opt/foam/db", "www-data")
-  addDir("/opt/foam/etc/", "www-data")
-  addDir("/opt/foam/etc/gcf-ca-certs", "root")
-  addDir("/opt/foam/log", "www-data")
-  addDir("/opt/foam/log/tasks", "www-data")
-  addDir("/opt/foam/tasks/queue", "www-data")
-  addDir("/opt/foam/tasks/completed", "www-data")
-  addDir("/opt/foam/etc/templates/custom", "root")
+  addDir("/opt/ofelia/ofam/db", "www-data")
+  addDir("/opt/ofelia/ofam/etc/", "www-data")
+  addDir("/opt/ofelia/ofam/etc/gcf-ca-certs", "root")
+  addDir("/opt/ofelia/ofam/log", "www-data")
+  addDir("/opt/ofelia/ofam/log/tasks", "www-data")
+  addDir("/opt/ofelia/ofam/tasks/queue", "www-data")
+  addDir("/opt/ofelia/ofam/tasks/completed", "www-data")
+  addDir("/opt/ofelia/ofam/etc/templates/custom", "root")
 
 def install_deps ():
   #res = call("pip --version")

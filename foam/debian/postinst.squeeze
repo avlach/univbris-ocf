@@ -20,11 +20,11 @@ set -e
 
 case "$1" in
     configure)
-      /bin/chown -R www-data /opt/foam/db
-      /bin/chown -R www-data /opt/foam/log
-      /bin/chown -R www-data /opt/foam/log/tasks
-      /bin/chown -R www-data /opt/foam/tasks
-      /bin/chown -R www-data /opt/foam/etc
+      /bin/chown -R www-data /opt/ofelia/ofam/db
+      /bin/chown -R www-data /opt/ofelia/ofam/log
+      /bin/chown -R www-data /opt/ofelia/ofam/log/tasks
+      /bin/chown -R www-data /opt/ofelia/ofam/tasks
+      /bin/chown -R www-data /opt/ofelia/ofam/etc
 
       /usr/sbin/make-ssl-cert generate-default-snakeoil
 

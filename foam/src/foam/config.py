@@ -2,7 +2,7 @@
 
 import logging
 
-FOAM_ROOT = "/opt/foam"
+FOAM_ROOT = "/opt/ofelia/ofam"
 
 DB_PATH = "%s/db/geni-openflow.db" % (FOAM_ROOT)
 CONFIGDB_PATH = "%s/db/config.db" % (FOAM_ROOT)

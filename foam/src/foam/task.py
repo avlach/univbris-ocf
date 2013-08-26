@@ -3,7 +3,7 @@
 # Copyright (c) 2011-2012  The Board of Trustees of The Leland Stanford Junior University
 
 import sys
-sys.path.append("/opt/foam/lib")
+sys.path.append("/opt/ofelia/ofam/lib")
 
 import subprocess
 import json

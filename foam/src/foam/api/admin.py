@@ -546,7 +546,7 @@ class AdminAPIv1(Dispatcher):
   @route('/core/admin/expedient-stamp-fs-with-vlan', methods=["POST", "GET"])
   def expedientStampFSwithVlan(self):
     try:
-      filedir = './opt/foam/db'
+      filedir = './opt/ofelia/ofam/db'
       filename = os.path.join(filedir, 'expedient_slices_info.json')
       if os.path.isfile(filename):
         f = open(filename, 'r')
@@ -583,7 +583,7 @@ class AdminAPIv1(Dispatcher):
         old_exp_shutdown_success = self.gapi_DeleteSliver(slice_urn, creds, [])
         creation_result = self.gapi_CreateSliver(slice_urn, creds, slice_of_rspec, user_info)
         #store updated dict as a json file in foam db folder
-        filedir = './opt/foam/db'
+        filedir = './opt/ofelia/ofam/db'
         filename = os.path.join(filedir, 'expedient_slices_info.json')
         f = open(filename, 'w')
         json.dump(updated_slice_info_dict, f)

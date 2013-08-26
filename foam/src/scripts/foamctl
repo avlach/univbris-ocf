@@ -3,7 +3,7 @@
 # Copyright (c) 2012  Barnstormer Softworks Ltd.
 
 import sys
-sys.path.append("/opt/foam/lib")
+sys.path.append("/opt/ofelia/ofam/lib")
 
 from optparse import OptionParser
 import foam.core.htpasswd as htpasswd
@@ -33,7 +33,7 @@ def do_setPassword (opts):
   else:
     admin_passwd = getpass.getpass("FOAM Admin Password: ")
 
-  ht = htpasswd.HtpasswdFile("/opt/foam/etc/admin.htpasswd", True)
+  ht = htpasswd.HtpasswdFile("/opt/ofelia/ofam/etc/admin.htpasswd", True)
   ht.update("foamadmin", admin_passwd)
   ht.save()
   
@@ -42,9 +42,9 @@ def certs_parse_args (args):
   return {}
 
 def do_bundleCerts (opts):
-  bundle = file("/opt/foam/etc/nginx-ca-certs.pem", "w+")
-  for f in os.listdir("/opt/foam/etc/gcf-ca-certs"):
-    bundle.write(file("/opt/foam/etc/gcf-ca-certs/%s" % f, "r").read())
+  bundle = file("/opt/ofelia/ofam/etc/nginx-ca-certs.pem", "w+")
+  for f in os.listdir("/opt/ofelia/ofam/etc/gcf-ca-certs"):
+    bundle.write(file("/opt/ofelia/ofam/etc/gcf-ca-certs/%s" % f, "r").read())
 
 def pa_listSlivers (args):
   parser = OptionParser()
