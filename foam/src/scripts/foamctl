@@ -620,7 +620,7 @@ def do_stampFsWithVlan (opts):
   passwd = getPassword(opts)
   url = URL % (opts.host, "expedient-stamp-fs-with-vlan")
   if (opts.urn is None) or (opts.vlan_stamp_start == 0) or (opts.vlan_stamp_end == 0):
-    exit("Usage: foamctl ofelia:vlans:stamp-fs-with-vlan --urn <sliver urn> --vlanstampstart <vlan stamp start> --vlanstampstop <vlan stamp stop") 
+    exit("Usage: foamctl ofelia:vlans:stamp-fs-with-vlan --urn <sliver urn> --vlanstampstart <vlan stamp start> --vlanstampend <vlan stamp end>") 
   obj = {"urn" : opts.urn, "vlan_stamp_start" : opts.vlan_stamp_start, "vlan_stamp_end" : opts.vlan_stamp_end}
   data = connect(url, opts.C_user, passwd, obj)
   outputJSON(data)
