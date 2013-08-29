@@ -121,8 +121,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     #if ConfigDB.getConfigItemByKey("flowvisor.hostname").getValue() is None:
     self.switch_dpid_list = None
     self.link_list = None
-    self.callback_http_attrs = None
-    self.callback_cred_attrs = None
+    self.callback_http_attr_list = [] #we have multiple expedients communicating with foam!
+    self.callback_cred_attr_list = [] #we have multiple expedients communicating with foam!
     
   def recordAction (self, action, credentials = [], urn = None):
     cred_ids = []
@@ -769,33 +769,36 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       raise e
   
   def topology_changed_alert_expedient(self):
-    if self.callback_cred_attrs is None:
+    if len(self.callback_cred_attr_list)==0:
       self._log.info("Credential info missing from expedient callback!")
       return ""
-    username = self.callback_cred_attrs['username']
-    password = self.callback_cred_attrs['password']
-    body="<?xml version=\"1.0\"?> <methodCall> <methodName>topology_changed</methodName> <params><param><int>"+str(self.callback_http_attrs['cookie'])+"</int></param></params> </methodCall>"
-    base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
-    authheader =  "Basic %s" % base64string # this encodes the username/password for basic HTTP authentication according to HTTP standar
-    headers={"Authorization": authheader}
-    # now the URL of the XML RPC  is split up in two parts, as httplib requires them to be fed separately
-    firstIndex=self.callback_http_attrs['url'].find("//")
-    lastIndex=self.callback_http_attrs['url'].find("/",firstIndex+3,len(self.callback_http_attrs['url']))
-    if lastIndex==-1:
-      lastIndex=len(self.callback_http_attrs['url'])	
-    clearingHouseURL1=self.callback_http_attrs['url'][firstIndex+2:lastIndex]
-    if lastIndex+1 < len(self.callback_http_attrs['url']):
-      clearingHouseURL2="/"+self.callback_http_attrs['url'][lastIndex+1:len(self.callback_http_attrs['url'])]
-    else:
-      clearingHouseURL2="";
-    connectionToClearingHouse= httplib.HTTPSConnection(clearingHouseURL1)
-    connectionToClearingHouse.request("POST",clearingHouseURL2,body,headers) # sends the XMLRPC towards expedient
-    response=connectionToClearingHouse.getresponse(); # gets the answer from expedient. if everything was fine expedient should be requesting the new topology
-    self._log.info("---Expedient notification of topo change start---")
-    self._log.info(response.status) #check these prints to see what failed...
-    self._log.info(response.reason)
-    self._log.info(response.read()) 
-    self._log.info("---Expedient notification of topo change end---")
+    for i,at in enumerate(self.callback_cred_attr_list):
+      callback_cred_attrs = self.callback_cred_attr_list[i]
+      callback_http_attrs = self.callback_http_attr_list[i]
+      username = callback_cred_attrs['username']
+      password = callback_cred_attrs['password']
+      body="<?xml version=\"1.0\"?> <methodCall> <methodName>topology_changed</methodName> <params><param><int>"+str(callback_http_attrs['cookie'])+"</int></param></params> </methodCall>"
+      base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
+      authheader =  "Basic %s" % base64string # this encodes the username/password for basic HTTP authentication according to HTTP standar
+      headers={"Authorization": authheader}
+      # now the URL of the XML RPC  is split up in two parts, as httplib requires them to be fed separately
+      firstIndex=callback_http_attrs['url'].find("//")
+      lastIndex=callback_http_attrs['url'].find("/",firstIndex+3,len(callback_http_attrs['url']))
+      if lastIndex==-1:
+        lastIndex=len(callback_http_attrs['url'])	
+      clearingHouseURL1=callback_http_attrs['url'][firstIndex+2:lastIndex]
+      if lastIndex+1 < len(callback_http_attrs['url']):
+        clearingHouseURL2="/"+callback_http_attrs['url'][lastIndex+1:len(callback_http_attrs['url'])]
+      else:
+        clearingHouseURL2="";
+      connectionToClearingHouse= httplib.HTTPSConnection(clearingHouseURL1)
+      connectionToClearingHouse.request("POST",clearingHouseURL2,body,headers) # sends the XMLRPC towards expedient
+      response=connectionToClearingHouse.getresponse(); # gets the answer from expedient. if everything was fine expedient should be requesting the new topology
+      self._log.info("---Expedient notification of topo change start---")
+      self._log.info(response.status) #check these prints to see what failed...
+      self._log.info(response.reason)
+      self._log.info(response.read()) 
+      self._log.info("---Expedient notification of topo change end---")
     return ""
 
   #@check_user
@@ -807,8 +810,8 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       return ""
     callback_cred_attrs = {'username': kwargs['user'].username,'password':kwargs['password'].password}
     #utils.create_or_update(CallBackServerProxy, filter_attrs, attrs)  
-    self.callback_http_attrs = callback_http_attrs
-    self.callback_cred_attrs = callback_cred_attrs   
+    self.callback_http_attr_list.append(callback_http_attrs)
+    self.callback_cred_attr_list.append(callback_cred_attrs)   
     return ""
   
   #as is, probably needs changes because of DB refs  
