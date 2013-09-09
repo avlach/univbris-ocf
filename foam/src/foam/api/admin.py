@@ -23,6 +23,8 @@ from foam.ethzlegacyoptinstuff.legacyoptin.flowspaceutils import dotted_ip_to_in
     int_to_dotted_ip, int_to_mac, parseFVexception
 from foam.ethzlegacyoptinstuff.api_exp_to_rspecv3.expdatatogeniv3rspec import *
 
+import time, random
+
 
 def _same(val):
 	return "%s" % val 
@@ -585,9 +587,11 @@ class AdminAPIv1(Dispatcher):
         #store updated dict as a json file in foam db folder
         filedir = './opt/ofelia/ofam/db'
         filename = os.path.join(filedir, 'expedient_slices_info.json')
-        f = open(filename, 'w')
+        tempfilename = os.path.join(filedir, 'expedient_slices_info.json.temp.' + str(time.time()) + str(random.randint(1,10000)))
+        f = open(tempfilename, 'w')
         json.dump(updated_slice_info_dict, f)
         f.close()
+        os.rename(tempfilename, filename)
         return jsonify({"slice-stamped" : "yes"})
       else:
         self._log.exception("The expedient slice info dict file is non-existent!")

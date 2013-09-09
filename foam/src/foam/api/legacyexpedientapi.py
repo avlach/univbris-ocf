@@ -15,6 +15,7 @@ from django.contrib.sites.models import Site
 
 import os
 import sys
+import random
 
 #legacy optin imports
 #from foam.ethzlegacyoptinstuff.legacyoptin.xmlrpcmodels import CallBackServerProxy, FVServerProxy
@@ -572,9 +573,11 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     #store updated dict as a json file in foam db folder
     filedir = './opt/ofelia/ofam/db'
     filename = os.path.join(filedir, 'expedient_slices_info.json')
-    f = open(filename, 'w')
+    tempfilename = os.path.join(filedir, 'expedient_slices_info.json.temp.' + str(time.time()) + str(random.randint(1,10000)))
+    f = open(tempfilename, 'w')
     json.dump(self.slice_info_dict, f)
     f.close()
+    os.rename(tempfilename, filename)
     
     return {
           'error_msg': "",
@@ -624,9 +627,11 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     #store updated dict as a json file in foam db folder
     filedir = './opt/ofelia/ofam/db'
     filename = os.path.join(filedir, 'expedient_slices_info.json')
-    f = open(filename, 'w')
+    tempfilename = os.path.join(filedir, 'expedient_slices_info.json.temp.' + str(time.time()) + str(random.randint(1,10000)))
+    f = open(tempfilename, 'w')
     json.dump(self.slice_info_dict, f)
     f.close()
+    os.rename(tempfilename, filename)
     
     return ""
   
@@ -689,9 +694,11 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     #store updated dict as a json file in foam db folder
     filedir = './opt/ofelia/ofam/db'
     filename = os.path.join(filedir, 'expedient_slices_info.json')
-    f = open(filename, 'w')
+    tempfilename = os.path.join(filedir, 'expedient_slices_info.json.temp.' + str(time.time()) + str(random.randint(1,10000)))
+    f = open(tempfilename, 'w')
     json.dump(self.slice_info_dict, f)
     f.close()
+    os.rename(tempfilename, filename)
     
     return ""
 
