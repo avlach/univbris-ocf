@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load ch_extras %}
+
+{% block head %}
+<script>
+	$(document).ready(function() {
+		$("table.fulltable td").css("padding", "1px 1px 1px 1px");
+		$("input[type=text]").css("width", "280px");
+                if ("{{alertMessage}}" != ""){
+			alert("{{alertMessage}}");
+		}
+	})
+</script>
+<style>
+table.fulltable input[type=text] {
+    width: 70px;
+}
+span.next_link {
+    font-weight: bold;
+}
+select.wide {
+    width: 600px;
+}
+div.errors {
+    color: #a70000;
+    font-weight: bold;
+}
+
+div.steps {
+    background-color: #EEE;
+    border: 1px solid #CCC;
+    border-radius: 0px 0px 25px 25px;
+    margin-bottom: 10px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 0px;
+    -moz-border-radius: 0px 0px 25px 25px;
+    padding: 10px;
+    vertical-align: middle;
+    -webkit-border-radius: 0px 0px 25px 25px;
+    width: 400px;
+}
+
+.center {
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main">
+    
+    <h1 style="margin-bottom:0px;">Set FlowSpace for Slice {{ slice.name }}</h1>
+    
+<div id="procsteps" class="steps center">
+    1. <a href="{% url book_openflow slice.id %}">Select OpenFlow Ports</a>
+    2. <a href="{% url flowspace slice.id %}" style="font-weight: bold;">Select/Modify Flowspace</a>
+</div>
+
+	<div class="help_text">
+	<p>Select wavelength/set of wavelengths to be reserved in the chosen connection.</p>
+	</div>
+
+    <form class="form" id='flowspace_formset' method="POST" action="{% url flowspace slice.id %}">{% csrf_token %}
+
+		<div class="center">
+
+
+	    	<table class="fulltable ">
+	    		<thead>
+	    			<tr><th>Frequency</th><th></th></tr>
+	    		</thead>
+	    		<tbody>
+                {% for wave in wavelengths %}
+		            <tr>
+		            	<th><strong>{{ wave.frequency }}</strong></th>
+		            	<td>
+		            		<input type="checkbox" name="selected_wavelengths"
+          value="aaaa" id="aaaa" />
+		            	</td>
+		            </tr>
+                {% endfor %}
+
+
+		        </tbody>
+	        </table>
+			<br/>
+
+
+            <input id='submit' type="submit" value="Save" 
+		{%if slice.started %}onClick='return confirm("Once you save the new FlowSpace a new request will be generated, until it is granted, your old FlowSpace, if any, will be deleted. Are you sure you want to save a new FlowSpace?");'
+		{%else %}onClick='return confirm("Your slice is stopped at the moment. Remember to start it to request the saved FlowSpace.");'
+		{% endif%}/>
+			<span class="next_link">
+				| <a href="{% url flowspace slice.id %}">Clear</a> | 
+				{% if done %}
+				<a href="{% url slice_detail slice.id %}" onClick='return confirm("Flowspace must be saved before exiting. Are you sure you are done?");'>Done</a>
+				{% else %}
+				<a href="{% url gcf_sshkeys slice.id %}">Next</a>
+				{% endif %}
+			</span>
+        </div>
+    </form>
+</div>
+{% endblock %}
