@@ -20,7 +20,9 @@ from expedient.common.permissions.utils import \
 from expedient.clearinghouse.slice.models import Slice
 from expedient.clearinghouse.resources.models import Resource
 from expedient.clearinghouse.aggregate.models import Aggregate
-from models import OpenFlowAggregate, OpenFlowSliceInfo, OpenFlowConnection
+# O-FLOWVISOR UPDATE
+from models import OpenFlowAggregate, OpenFlowSliceInfo, OpenFlowConnection, Wavelength
+# END O-FLOWVISOR UPDATE
 from models import NonOpenFlowConnection
 from forms import OpenFlowAggregateForm, OpenFlowSliceInfoForm
 from forms import OpenFlowStaticConnectionForm, OpenFlowConnectionSelectionForm
@@ -412,6 +414,49 @@ def flowspace(request, slice_id, fsmode = 'advanced', free_vlan = None, alertMes
     """
     slice = get_object_or_404(Slice, id=slice_id)
 
+    # O-FLOWVISOR UPDATE
+    logger.info("request.method %s",str(request.method))
+    #ports=request.POST["selected_ifaces"]
+
+    iface_ids = map(int, request.POST.getlist("selected_ifaces"))
+    for iface in iface_ids:
+        logger.info("ifff %s",str(iface))
+
+    src=546
+    dst=533
+    # get the connection ID
+    conn=OpenFlowConnection.objects.get(
+            src_iface=src, dst_iface=dst)
+
+    # get any wavelength available in the connection
+    allWavelengths=Wavelength.objects.filter(
+        conn_ID=conn.pk)
+    #for wav in allWavelengths:
+
+    # if there are wavelength (available or not) then switch to select wavelength page
+    if allWavelengths.count() > 0:
+        availableWavelengths=Wavelength.objects.filter(
+            conn_ID=conn.pk, available=1)
+
+        return simple.direct_to_template(
+        request,
+        template="openflow_select_wavelength.html",
+        extra_context={
+            "slice": slice,
+            "wavelengths": availableWavelengths,
+            "alertMessage":alertMessage,
+            "breadcrumbs": (
+                ("Home", reverse("home")),
+                ("Project %s" % slice.project.name, reverse("project_detail", args=[slice.project.id])),
+                ("Slice %s" % slice.name, reverse("slice_detail", args=[slice_id])),
+                ("Choose Flowspace", reverse("flowspace", args=[slice_id])),
+            ),
+        },
+       )
+
+    # END O-FLOWVISOR UPDATE
+
+
     class SliverMultipleChoiceField(forms.ModelMultipleChoiceField):
         def label_from_instance(self, obj):
             return "%s" % obj.resource.as_leaf_class()
@@ -640,6 +685,18 @@ def get_nodes_links(slice):
             available=True,
         )
         for s in switches:
+            # O-FLOWVISOR UPDATE
+            if s.optical==False:
+                try:
+                    image_url = reverse('img_media_openflow', args=("switch-tiny.png",))
+                except:
+                    image_url = 'switch-tiny.png'
+            else:
+                try:
+                    image_url = reverse('img_media_openflow', args=("oswitch-tiny.png",))
+                except:
+                    image_url = 'oswitch-tiny.png'
+            # END O-FLOWVISOR UPDATE
             id_to_idx[s.id] = len(nodes)
             nodes.append(Node(name = s.name, value = s.id, description = "", type = "OpenFlow switch",
                               image = image_url, aggregate = agg,

@@ -126,8 +126,9 @@ production networks, and is currently deployed in several universities.
         Get the topology for this aggregate as a set of links.
         '''
         return get_raw_topology(self)
-
-    def parse_switches(self, active_switches_raw):
+    # O-FLOWVISOR UPDATE
+    def parse_switches(self, active_switches_raw,optical):
+    # END O-FLOWVISOR UPDATE
         '''
         Update the set of available switches.
         '''
@@ -144,15 +145,16 @@ production networks, and is currently deployed in several universities.
             ports = [int(p) for p in portstrs if p != ""]
             
             switches[dpid] = ports
-            
-        create_or_update_switches(self, switches)            
-
-    def parse_links(self, active_links_raw):
+        # O-FLOWVISOR UPDATE
+        create_or_update_switches(self, switches,optical)
+        # END O-FLOWVISOR UPDATE
+# O-FLOWVISOR UPDATE
+    def parse_links(self, active_links_raw,optical):
         '''
         Get the available links and update the network connections.
         '''
-        create_or_update_links(self, active_links_raw)
-        
+        create_or_update_links(self, active_links_raw,optical)
+    # END O-FLOWVISOR UPDATE
     def update_topology(self):
         '''
         Read the topology from the OM and FV, parse it, and store it.
@@ -160,13 +162,24 @@ production networks, and is currently deployed in several universities.
         try:
             switches = self.client.proxy.get_switches()
             links = self.client.proxy.get_links()
+            # O-FLOWVISOR UPDATE
+            cswitches = self.client.proxy.get_cswitches()
+            clinks = self.client.proxy.get_clinks()
+            # END O-FLOWVISOR UPDATE
+
         except:
             import traceback
             traceback.print_exc()
             raise
-        self.parse_switches(switches)
-        self.parse_links(links)
+        #self.parse_switches(switches)
+        #self.parse_links(links)
+        # O-FLOWVISOR UPDATE
+        self.parse_switches(switches,False)
+        self.parse_links(links,False)
 
+        self.parse_switches(cswitches,True)
+        self.parse_links(clinks,True)
+        # END O-FLOWVISOR UPDATE
  
     def get_offered_vlans(self, set=None):
 
@@ -313,6 +326,14 @@ class OpenFlowSwitch(resource_models.Resource):
     def __unicode__(self):
         return "OpenFlow Switch %s" % self.datapath_id
 
+    # O-FLOWVISOR UPDATE
+    optical = models.BooleanField(
+        "Optical", default=False,
+        help_text="Are there optical\
+ switches included?")
+
+    # END O-FLOWVISOR UPDATE
+
 class OpenFlowConnection(models.Model):
     '''Connection between two interfaces'''
     src_iface = models.ForeignKey("OpenFlowInterface",
@@ -335,6 +356,16 @@ class OpenFlowConnection(models.Model):
     
     def __unicode__(self):
         return "%s to %s" % (self.src_iface, self.dst_iface)
+
+# O-FLOWVISOR UPDATE
+class Wavelength(models.Model):
+    conn_ID = models.ForeignKey("OpenFlowConnection",
+                                  related_name="connection_ID")
+    frequency = models.CharField(max_length=100, primary_key=False)
+    available = models.BooleanField(
+        "available", default=False)
+
+# END O-FLOWVISOR UPDATE
 
 class NonOpenFlowConnection(models.Model):
     """Connection to/from an OpenFlow Interface to a non-OpenFlow Resource"""
@@ -450,8 +481,9 @@ class FlowSpaceRule(models.Model):
     tp_dst_end = modelfields.LimitedIntegerField(
         'Transport destination port range end',
         max_value=2**16-1, min_value=0, blank=True, null=True)
-
-def create_or_update_switches(aggregate, switches):
+# O-FLOWVISOR UPDATE
+def create_or_update_switches(aggregate, switches,optical):
+# END O-FLOWVISOR UPDATE
     """Create or update the switches in aggregate C{aggregate} with switches in C{switches}.
     
     C{switches} is a dict mapping datapath ids to list of ports.
@@ -460,6 +492,7 @@ def create_or_update_switches(aggregate, switches):
 
     active_switch_ids = []
     active_iface_ids = []
+    # O-FLOWVISOR UPDATE
     for dpid, ports in switches.items():
         switch, _ = create_or_update(
             OpenFlowSwitch,
@@ -470,9 +503,11 @@ def create_or_update_switches(aggregate, switches):
                 aggregate=aggregate,
                 name=dpid,
                 available=True,
-                status_change_timestamp=datetime.now(), 
+                status_change_timestamp=datetime.now(),
+                optical=optical,
             )
         )
+        # END O-FLOWVISOR UPDATE
         active_switch_ids.append(switch.id)
         
         for port in ports:
@@ -494,15 +529,22 @@ def create_or_update_switches(aggregate, switches):
             active_iface_ids.append(iface.id)
             
     # make all inactive switches and interfaces unavailable.
-    OpenFlowInterface.objects.filter(
-        aggregate=aggregate).exclude(id__in=active_iface_ids).update(
-            available=False, status_change_timestamp=datetime.now())
-        
-    OpenFlowSwitch.objects.filter(
-        aggregate=aggregate).exclude(id__in=active_switch_ids).update(
-            available=False, status_change_timestamp=datetime.now())
+    # O-FLOWVISOR UPDATE
 
-def create_or_update_links(aggregate, links):
+    if optical == False:
+        OpenFlowInterface.objects.filter(
+            aggregate=aggregate).exclude(id__in=active_iface_ids).update(
+              available=False, status_change_timestamp=datetime.now())
+        OpenFlowSwitch.objects.filter(
+            aggregate=aggregate).exclude(id__in=active_switch_ids).update(
+              available=False, status_change_timestamp=datetime.now())
+
+
+
+    # END O-FLOWVISOR UPDATE
+    # O-FLOWVISOR UPDATE
+def create_or_update_links(aggregate, links,optical):
+    # END O-FLOWVISOR UPDATE
     """Create or update the links in aggregate C{aggregate}.
     
     @param aggregate: the aggregate with openflow links and switches.
@@ -540,17 +582,50 @@ def create_or_update_links(aggregate, links):
             src_iface=src_iface,
             dst_iface=dst_iface,
         )
+
+        # O-FLOWVISOR UPDATE
+        Wavelength.objects.filter(conn_ID=cnxn).delete()
+        for val in attrs.values():
+            list1=str(val).split(',')
+            for wave in list1:
+                #logger.info("cccccccc %s" %str(wave))
+                list2=str(wave).split('=')
+                freq=''
+                avail=False
+                for wave2 in list2:
+                    #logger.info("ddddddd %s" %str(wave2))
+                    if freq == '':
+                        freq=wave2
+                    else:
+                        if str(wave2) == "1":
+                            avail=True
+                        else:
+                            avail=False
+                #logger.info("eeeeeeee %s" %avail)
+                wavelength, _ = Wavelength.objects.get_or_create(
+                    conn_ID=cnxn,
+                    frequency=freq,
+                    available=avail,
+                )
+
+         # END O-FLOWVISOR UPDATE
+
         active_cnxn_ids.append(cnxn.id)
         
     # Delete old connections.
-    OpenFlowConnection.objects.filter(
+    # O-FLOWVISOR UPDATE
+
+    if optical == False:
+      OpenFlowConnection.objects.filter(
         # Make sure all the connections we delete have both end points in
         # the aggregate.
         src_iface__switch__aggregate=aggregate,
         dst_iface__switch__aggregate=aggregate).exclude(
             # don't delete active connections
             id__in=active_cnxn_ids).delete()
-    
+
+    # END O-FLOWVISOR UPDATE
+
 def get_raw_topology(aggregate):
     """Get the openflow toplogy as a set of links in the aggregate."""
     links = set()
@@ -562,7 +637,7 @@ def get_raw_topology(aggregate):
 
     return links
 
-        
+
 # when a slice is deleted, make sure all its flowspace is deleted too
 def delete_empty_flowspace(sender, **kwargs):
     empty_fs = FlowSpaceRule.objects.annotate(
