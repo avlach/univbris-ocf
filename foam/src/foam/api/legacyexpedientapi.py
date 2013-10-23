@@ -710,6 +710,7 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     '''
     Return the switches that the FlowVisor gives. Change to CH format.
     '''
+    self._log.info("aaaaaaaaaaaaaaaaaaaa get electrical switches")
     complete_list = []
     try:
       dpids = FV.getDeviceList()
@@ -728,6 +729,30 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
   #@check_user
   #@check_fv_set
   #@rpcmethod(signature=['array'])
+
+  # O-FLOWVISOR UPDATE
+  def pub_get_cswitches(self, **kwargs):
+    '''
+    Return the switches that the FlowVisor gives. Change to CH format.
+    '''
+    self._log.info("aaaaaaaaaaaaaaaaaaaa get optical switches")
+    complete_list = []
+    try:
+      dpids = FV.getCDeviceList()
+      for d in dpids:
+        FV.log.debug("XMLRPC:getDeviceInfo (%s)" % (d))
+      infos = [FV.xmlcall("getDeviceInfo", d) for d in dpids] #need to make it prettier :)
+      switches = zip(dpids, infos)
+    except Exception,e:
+      import traceback
+      traceback.print_exc()
+      raise e
+    complete_list.extend(switches)
+    return complete_list
+
+  # END O-FLOWVISOR UPDATE
+
+
   def pub_get_links(self, **kwargs):
     '''
     Return the links that the FlowVisor gives. Change to CH format.
@@ -745,9 +770,30 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       raise e 
     complete_list.extend(links) 
     return complete_list
-  
+
+  def pub_get_clinks(self, **kwargs):
+    '''
+    Return the links that the FlowVisor gives. Change to CH format.
+    '''
+    self._log.info("aaaaaaaaaaaaaaaaaaaa get optical links")
+
+    complete_list = []
+    try:
+      links = [(l.pop("srcDPID"),
+                l.pop("srcPort"),
+                l.pop("dstDPID"),
+                l.pop("dstPort"),
+                l) for l in FV.getCLinkList()]
+    except Exception,e:
+      import traceback
+      traceback.print_exc()
+      raise e
+    complete_list.extend(links)
+    return complete_list
+  # END O-FLOWVISOR UPDATE
+
   def check_topo_change(self):
-    #self._log.info("Topo check fired!")
+    self._log.info("Topo check fired!")
     if (self.switch_dpid_list is None) or (self.link_list is None): #on startup ping rebuild FV info
       if self.pub_get_switches() != []:
         switch_dpids_unzipped, infos = zip(*self.pub_get_switches())
@@ -774,7 +820,37 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
       import traceback
       traceback.print_exc()
       raise e
-  
+
+  def check_ctopo_change(self):
+    #self._log.info("Topo check fired!")
+    if (self.switch_dpid_list is None) or (self.link_list is None): #on startup ping rebuild FV info
+      if self.pub_get_cswitches() != []:
+        switch_dpids_unzipped, infos = zip(*self.pub_get_cswitches())
+        self.switch_dpid_list = list(switch_dpids_unzipped)
+      else:
+        self.switch_dpid_list = []
+      self.link_list = self.pub_get_clinks()
+    try:
+      if self.pub_get_cswitches() != []:
+        updated_switch_dpids_unzipped, infos = zip(*self.pub_get_cswitches())
+        updated_switch_dpid_list = list(updated_switch_dpids_unzipped)
+      else:
+        updated_switch_dpid_list = []
+      updated_link_list = self.pub_get_clinks()
+      if (set(updated_switch_dpid_list) != set(self.switch_dpid_list)):
+        self._log.info("Topology has changed because one or more switches has(have) joined or withdrawn!")
+        self.topology_changed_alert_expedient()
+      if (updated_link_list != self.link_list):
+        self._log.info("Topology has changed because one or more links is(are) up or down!")
+        self.topology_changed_alert_expedient()
+      self.switch_dpid_list = updated_switch_dpid_list
+      self.link_list = updated_link_list
+    except Exception, e:
+      import traceback
+      traceback.print_exc()
+      raise e
+  # END O-FLOWVISOR UPDATE
+
   def topology_changed_alert_expedient(self):
     if len(self.callback_cred_attr_list)==0:
       self._log.info("Credential info missing from expedient callback!")
@@ -851,7 +927,11 @@ class AMLegExpAPI(foam.api.xmlrpc.Dispatcher):
     if (FV.xmlconn is None):
       self._log.exception("No xlmlrpc connection with Flowvisor detected")
       raise Exception("No xlmlrpc connection with Flowvisor detected")
-    self.check_topo_change() #repeat on ping
+    #self.check_topo_change() #repeat on ping
+    # O-FLOWVISOR UPDATE
+    self.check_ctopo_change() #repeat on ping
+    self.check_topo_change()
+    # END O-FLOWVISOR UPDATE
     try:   
       FV.log.debug("XMLRPC:ping (%s)" % (str(data)))
       return FV.xmlcall("ping", " " + str(data)) #this will return a PONG is everything alright

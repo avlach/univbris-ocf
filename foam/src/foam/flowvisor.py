@@ -97,10 +97,24 @@ class _Connection(object):
     dl.sort()
     return dl
 
+# O-FLOWVISOR UPDATE
+  def getCDeviceList (self):
+    self.log.debug("XMLRPC:ListCDevices")
+    dl = self.xmlcall("listCDevices")
+    dl.sort()
+    return dl
+# END O-FLOWVISOR UPDATE
+
   def getLinkList (self):
     self.log.debug("XMLRPC:getLinks")
     return self.xmlcall("getLinks")
-    
+
+# O-FLOWVISOR UPDATE
+  def getCLinkList (self):
+    self.log.debug("XMLRPC:getCLinks")
+    return self.xmlcall("getCLinks")
+# END O-FLOWVISOR UPDATE
+
   def getFVVersion (self):
     self.log.debug("XMLRPC:getFVVersion")
     self.fvversion = self.xmlcall("ping", "")
